@@ -1,0 +1,24 @@
+[Unit]
+Description=Resource Monitor API
+After=network.target
+
+[Service]
+Type=simple
+User=oracle
+WorkingDirectory=/opt/resource-monitor/server
+EnvironmentFile=/opt/resource-monitor/server/.env
+ExecStart=/opt/resource-monitor/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8080 --workers 1
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+# ─── Install instructions ─────────────────────────────────────────
+# sudo cp resource-monitor.service /etc/systemd/system/
+# sudo systemctl daemon-reload
+# sudo systemctl enable resource-monitor
+# sudo systemctl start resource-monitor
+# sudo systemctl status resource-monitor
