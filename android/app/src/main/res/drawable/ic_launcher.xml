@@ -11,7 +11,7 @@
         android:strokeColor="#4A9EFF"
         android:strokeWidth="6"
         android:pathData="M54,24 A30,30 0 1 1 53.99,24"/>
-    <!-- Center dot -->
-    <circle android:fillColor="#4A9EFF"
-        android:cx="54" android:cy="54" android:r="6"/>
+    <!-- Center dot (circle via path: cx=54 cy=54 r=6) -->
+    <path android:fillColor="#4A9EFF"
+        android:pathData="M48,54 A6,6,0,1,0,60,54 A6,6,0,1,0,48,54z"/>
 </vector>
