@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.aamer.resourcemonitor.BuildConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -27,8 +28,8 @@ class SettingsRepository(private val context: Context) {
 
     val configFlow: Flow<ServerConfig> = context.dataStore.data.map { prefs ->
         ServerConfig(
-            baseUrl    = prefs[KEY_BASE_URL]    ?: "",
-            apiKey     = prefs[KEY_API_KEY]     ?: "",
+            baseUrl    = prefs[KEY_BASE_URL]    ?: BuildConfig.DEFAULT_SERVER_URL,
+            apiKey     = prefs[KEY_API_KEY]     ?: BuildConfig.DEFAULT_API_KEY,
             serverName = prefs[KEY_SERVER_NAME] ?: "My Oracle Server"
         )
     }

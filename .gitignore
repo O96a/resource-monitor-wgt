@@ -15,7 +15,7 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
-android/app/google-services.json
+# android/app/google-services.json  — stub committed; replace with real file or use GOOGLE_SERVICES_JSON secret
 *.iml
 .idea/
 

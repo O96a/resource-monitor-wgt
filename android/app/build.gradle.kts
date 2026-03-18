@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("com.google.gms.google-services")
-    id("com.squareup.moshi.kotlin.codegen") version "1.15.1"
+    id("kotlin-kapt")
 }
 
 android {
@@ -15,6 +15,10 @@ android {
         targetSdk      = 34
         versionCode    = 1
         versionName    = "1.0.0"
+
+        // Default server connection — change these to match your Oracle server
+        buildConfigField("String", "DEFAULT_SERVER_URL", "\"http://192.168.1.100:8080\"")
+        buildConfigField("String", "DEFAULT_API_KEY",    "\"8cadaa7f5465e3ad7fcbfb9ca751a005c5f2ef3c3b35e9e4\"")
     }
 
     buildTypes {
@@ -62,6 +66,7 @@ dependencies {
     implementation(libs.okhttp.core)
     implementation(libs.okhttp.logging)
     implementation(libs.moshi.core)
+    kapt("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
 }
