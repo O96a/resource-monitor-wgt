@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.moshi.core)
     kapt("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
+    implementation(libs.material)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
 }

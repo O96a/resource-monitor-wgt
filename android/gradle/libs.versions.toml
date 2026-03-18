@@ -14,6 +14,7 @@ datastore           = "1.1.1"
 navigationCompose   = "2.7.7"
 splashscreen        = "1.0.1"
 firebaseBom         = "33.1.0"
+material            = "1.12.0"
 
 [libraries]
 androidx-core-ktx              = { group = "androidx.core",            name = "core-ktx",                    version.ref = "coreKtx" }
@@ -34,8 +35,7 @@ retrofit-core                  = { group = "com.squareup.retrofit2",   name = "r
 retrofit-moshi                 = { group = "com.squareup.retrofit2",   name = "converter-moshi",              version.ref = "retrofit" }
 okhttp-core                    = { group = "com.squareup.okhttp3",     name = "okhttp",                       version.ref = "okhttp" }
 okhttp-logging                 = { group = "com.squareup.okhttp3",     name = "logging-interceptor",          version.ref = "okhttp" }
-moshi-core                     = { group = "com.squareup.moshi",       name = "moshi-kotlin",                 version.ref = "moshi" }
-firebase-bom                   = { group = "com.google.firebase",      name = "firebase-bom",                 version.ref = "firebaseBom" }
+moshi-core                     = { group = "com.squareup.moshi",       name = "moshi-kotlin",                 version.ref = "moshi" }material                       = { group = "com.google.android.material", name = "material",                   version.ref = "material" }firebase-bom                   = { group = "com.google.firebase",      name = "firebase-bom",                 version.ref = "firebaseBom" }
 firebase-messaging             = { group = "com.google.firebase",      name = "firebase-messaging-ktx" }
 
 [plugins]
