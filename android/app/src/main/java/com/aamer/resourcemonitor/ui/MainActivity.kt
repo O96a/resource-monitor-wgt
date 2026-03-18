@@ -3,6 +3,7 @@ package com.aamer.resourcemonitor.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -51,6 +52,7 @@ fun pctColor(pct: Float) = when {
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         val vm = ViewModelProvider(this)[DashboardViewModel::class.java]
         setContent {
@@ -109,7 +111,7 @@ fun ResourceMonitorApp(vm: DashboardViewModel) {
             when (selectedTab) {
                 0 -> DashboardScreen(state, onRefresh = vm::refresh)
                 1 -> AlarmsScreen(state.alarms, onAck = vm::acknowledgeAlarm)
-                2 -> SettingsScreen()
+                2 -> SettingsScreen(vm)
             }
         }
     }
@@ -409,15 +411,14 @@ fun AlarmCard(alarm: Alarm, onAck: (String) -> Unit) {
 // ── Settings screen ───────────────────────────────────────────────
 
 @Composable
-fun SettingsScreen() {
-    // SettingsScreen reads/writes DataStore directly via its own viewmodel
-    // For brevity we use a composable-scoped coroutine scope approach
-    val scope = rememberCoroutineScope()
-    // In a real setup inject this via hilt or a ViewModelProvider
-    // Here we read from a remembered state
-    var baseUrl    by remember { mutableStateOf("") }
-    var apiKey     by remember { mutableStateOf("") }
-    var serverName by remember { mutableStateOf("") }
+fun SettingsScreen(vm: DashboardViewModel) {
+    val config by vm.configFlow.collectAsStateWithLifecycle(
+        initialValue = com.aamer.resourcemonitor.data.repository.ServerConfig()
+    )
+
+    var baseUrl    by remember(config.baseUrl)    { mutableStateOf(config.baseUrl) }
+    var apiKey     by remember(config.apiKey)     { mutableStateOf(config.apiKey) }
+    var serverName by remember(config.serverName) { mutableStateOf(config.serverName) }
     var saved      by remember { mutableStateOf(false) }
 
     Column(
@@ -440,7 +441,10 @@ fun SettingsScreen() {
 
         Spacer(Modifier.height(24.dp))
         Button(
-            onClick = { saved = true /* save via repo */ },
+            onClick = {
+                vm.saveConfig(baseUrl, apiKey, serverName)
+                saved = true
+            },
             modifier = Modifier.fillMaxWidth(),
             colors   = ButtonDefaults.buttonColors(containerColor = BlueAccent)
         ) {

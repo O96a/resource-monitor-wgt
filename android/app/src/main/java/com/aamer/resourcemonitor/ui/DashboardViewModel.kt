@@ -24,6 +24,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     private val settingsRepo = SettingsRepository(app)
 
+    val configFlow = settingsRepo.configFlow
+
     private val _state = MutableStateFlow(DashboardUiState())
     val state: StateFlow<DashboardUiState> = _state.asStateFlow()
 
@@ -75,6 +77,18 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { s ->
                 s.copy(alarms = s.alarms.filter { it.id != alarmId })
             }
+        }
+    }
+
+    fun saveConfig(baseUrl: String, apiKey: String, serverName: String) {
+        viewModelScope.launch {
+            settingsRepo.saveConfig(
+                com.aamer.resourcemonitor.data.repository.ServerConfig(
+                    baseUrl    = baseUrl.trim(),
+                    apiKey     = apiKey.trim(),
+                    serverName = serverName.trim().ifBlank { "My Oracle Server" }
+                )
+            )
         }
     }
 }

@@ -40,14 +40,14 @@ class MetricsFetchWorker(
     companion object {
         private const val WORK_NAME = "resource_monitor_periodic"
 
-        fun schedule(context: Context, intervalSeconds: Long = 30L) {
+        fun schedule(context: Context, intervalMinutes: Long = 15L) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
             val request = PeriodicWorkRequestBuilder<MetricsFetchWorker>(
-                repeatInterval = intervalSeconds,
-                repeatIntervalTimeUnit = TimeUnit.SECONDS
+                repeatInterval = intervalMinutes,
+                repeatIntervalTimeUnit = TimeUnit.MINUTES
             )
                 .setConstraints(constraints)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
