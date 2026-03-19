@@ -17,7 +17,7 @@ android {
         versionName    = "1.0.0"
 
         // Default server connection — change these to match your Oracle server
-        buildConfigField("String", "DEFAULT_SERVER_URL", "\"http://129.151.131.39:8080\"")
+        buildConfigField("String", "DEFAULT_SERVER_URL", "\"http://129.151.131.39:8090\"")
         buildConfigField("String", "DEFAULT_API_KEY",    "\"8cadaa7f5465e3ad7fcbfb9ca751a005c5f2ef3c3b35e9e4\"")
     }
 

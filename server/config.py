@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     server_name: str = "ORACLE-SERVER"
     api_key: str = "change-me"
     host: str = "0.0.0.0"
-    port: int = 8080
+    port: int = 8090
 
     # Oracle
     oracle_enabled: bool = True
