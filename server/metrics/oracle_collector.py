@@ -1,7 +1,11 @@
 import logging
 from typing import Dict, Any, Optional
 
-import oracledb
+try:
+    import oracledb
+    ORACLEDB_AVAILABLE = True
+except ImportError:
+    ORACLEDB_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,9 @@ async def collect_oracle_metrics(
         GRANT SELECT ON DBA_TABLESPACE_USAGE_METRICS TO monitor_user;
         GRANT SELECT ON V_$PARAMETER TO monitor_user;
     """
+    if not ORACLEDB_AVAILABLE:
+        logger.warning("python-oracledb not installed — Oracle metrics unavailable")
+        return None
     try:
         conn = oracledb.connect(user=user, password=password, dsn=dsn)
         cur = conn.cursor()
