@@ -52,7 +52,7 @@ fun pctColor(pct: Float) = when {
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        try { installSplashScreen() } catch (_: Exception) { /* Samsung One UI workaround */ }
         super.onCreate(savedInstanceState)
         val vm = ViewModelProvider(this)[DashboardViewModel::class.java]
         setContent {
@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ResourceMonitorApp(vm: DashboardViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     Scaffold(
         containerColor = BgColor,
@@ -452,7 +452,7 @@ fun SettingsScreen(vm: DashboardViewModel) {
         }
 
         Spacer(Modifier.height(16.dp))
-        Divider(color = Color(0xFF2A3050))
+        HorizontalDivider(color = Color(0xFF2A3050))
         Spacer(Modifier.height(16.dp))
         Text("Quick start", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))

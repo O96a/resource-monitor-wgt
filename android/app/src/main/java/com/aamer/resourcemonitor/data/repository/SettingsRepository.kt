@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.aamer.resourcemonitor.BuildConfig
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "server_prefs")
@@ -43,11 +44,7 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun isConfigured(): Boolean {
-        var configured = false
-        context.dataStore.data.collect { prefs ->
-            configured = !prefs[KEY_BASE_URL].isNullOrBlank() && !prefs[KEY_API_KEY].isNullOrBlank()
-            return@collect
-        }
-        return configured
+        val prefs = context.dataStore.data.first()
+        return !prefs[KEY_BASE_URL].isNullOrBlank() && !prefs[KEY_API_KEY].isNullOrBlank()
     }
 }

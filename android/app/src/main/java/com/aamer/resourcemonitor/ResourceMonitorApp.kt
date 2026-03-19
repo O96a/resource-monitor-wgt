@@ -25,8 +25,8 @@ class ResourceMonitorApp : Application() {
             // Re-enable messaging auto-init now that Firebase is ready
             FirebaseMessaging.getInstance().isAutoInitEnabled = true
             Log.i(TAG, "Firebase initialized successfully")
-        } catch (e: Exception) {
-            Log.w(TAG, "Firebase init failed – push notifications disabled", e)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Firebase init failed \u2013 push notifications disabled", t)
         }
     }
 }
