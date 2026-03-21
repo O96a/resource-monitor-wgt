@@ -135,6 +135,22 @@ class ResourceWidget : GlanceAppWidget() {
 }
 
 @Composable
+private fun LoadingView() {
+    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("Collecting…", style = TextStyle(color = ColorProvider(TextMuted), fontSize = 12.sp))
+    }
+}
+
+@Composable
+private fun ErrorView(message: String) {
+    Column(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Connection error", style = TextStyle(color = ColorProvider(Color(0xFFE24B4A)), fontSize = 13.sp, fontWeight = FontWeight.Bold))
+        Spacer(GlanceModifier.height(4.dp))
+        Text(message.take(60), style = TextStyle(color = ColorProvider(TextMuted), fontSize = 11.sp))
+    }
+}
+
+@Composable
 private fun MetricsView(
     snapshot: MetricsSnapshot,
     context: Context,
