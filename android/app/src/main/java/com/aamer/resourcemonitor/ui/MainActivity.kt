@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aamer.resourcemonitor.data.models.*
 import com.aamer.resourcemonitor.data.repository.ServerConfig
 import com.aamer.resourcemonitor.data.repository.SettingsRepository
+import com.aamer.resourcemonitor.widget.WidgetStateHolder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
