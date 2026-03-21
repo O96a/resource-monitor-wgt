@@ -184,6 +184,10 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 SectionLabel("System Resources")
                 Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     GaugeCard("CPU",  snap.os.cpuPercent,  Modifier.weight(1f))
                     GaugeCard("RAM",  snap.os.ramPercent,  Modifier.weight(1f))
                     GaugeCard("DISK", snap.os.diskPercent, Modifier.weight(1f))
