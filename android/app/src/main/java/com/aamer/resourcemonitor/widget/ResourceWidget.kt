@@ -31,6 +31,7 @@ private val BgDark    = Color(0xFF1A1F2E)
 private val CardDark  = Color(0xFF222840)
 private val TextPrimary = Color(0xFFD0DCFF)
 private val TextMuted   = Color(0xFF5A7090)
+private val BlueAccent  = Color(0xFF4A9EFF)
 
 // ── Arc gauge bitmap factory ──────────────────────────────────────
 // Generates a high-res bitmap to be scaled smoothly by ContentScale.Fit
