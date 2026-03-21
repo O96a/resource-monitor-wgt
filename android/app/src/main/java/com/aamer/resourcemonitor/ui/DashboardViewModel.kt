@@ -30,11 +30,17 @@ class DashboardViewModel @Inject constructor(
     val state: StateFlow<DashboardUiState> = _state.asStateFlow()
 
     init {
+        // Continuous polling every 3 seconds when the ViewModel is active
         viewModelScope.launch {
-            settingsRepo.configFlow.collect { config ->
+            while (true) {
+                val config = settingsRepo.configFlow.first()
                 val configured = config.baseUrl.isNotBlank() && config.apiKey.isNotBlank()
                 _state.update { it.copy(isConfigured = configured) }
-                if (configured) refresh(config.baseUrl, config.apiKey)
+                
+                if (configured) {
+                    refreshInternal(config.baseUrl, config.apiKey)
+                }
+                kotlinx.coroutines.delay(3000)
             }
         }
     }
@@ -43,12 +49,12 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             val config = settingsRepo.configFlow.first()
             if (config.baseUrl.isNotBlank() && config.apiKey.isNotBlank()) {
-                refresh(config.baseUrl, config.apiKey)
+                refreshInternal(config.baseUrl, config.apiKey)
             }
         }
     }
 
-    private suspend fun refresh(baseUrl: String, apiKey: String) {
+    private suspend fun refreshInternal(baseUrl: String, apiKey: String) {
         _state.update { it.copy(isLoading = true, error = null) }
         val repo = MetricsRepository.create(baseUrl, apiKey)
 
