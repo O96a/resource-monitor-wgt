@@ -57,7 +57,7 @@ fun makeGaugeBitmap(pct: Float, context: Context): BitmapDrawable {
     canvas.drawArc(rect, -220f, 260f, false, trackPaint)
 
     val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.Round
+        style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND
         val c = percentColor(pct)
         color = android.graphics.Color.argb(255, (c.red*255).toInt(), (c.green*255).toInt(), (c.blue*255).toInt())
     }
@@ -93,7 +93,7 @@ fun makeSparklineBitmap(points: List<Float>, context: Context): BitmapDrawable {
     }
 
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = 4f; strokeCap = Paint.Cap.Round; strokeJoin = Paint.Join.ROUND
+        style = Paint.Style.STROKE; strokeWidth = 4f; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
         color = 0xFF4A9EFF.toInt()
     }
     canvas.drawPath(path, paint)
