@@ -172,14 +172,18 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
         }
 
         state.snapshot?.let { snap ->
+            // Live Chart Section
+            item {
+                SectionLabel("Live CPU Activity (Last 60s)")
+                Spacer(Modifier.height(8.dp))
+                LiveSparklineCard(history = WidgetStateHolder.state.cpuHistory)
+            }
+
             // OS Gauge grid
             item {
+                Spacer(Modifier.height(8.dp))
                 SectionLabel("System Resources")
                 Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
                     GaugeCard("CPU",  snap.os.cpuPercent,  Modifier.weight(1f))
                     GaugeCard("RAM",  snap.os.ramPercent,  Modifier.weight(1f))
                     GaugeCard("DISK", snap.os.diskPercent, Modifier.weight(1f))
@@ -297,6 +301,40 @@ fun ArcGauge(pct: Float, color: Color, size: Dp) {
             fontSize   = 14.sp,
             fontWeight = FontWeight.Bold
         )
+    }
+}
+
+@Composable
+fun LiveSparklineCard(history: List<Float>) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = CardColor),
+        shape  = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("${history.lastOrNull()?.toInt() ?: 0}%",
+                    color = BlueAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Real-time CPU", color = MutedText, fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(12.dp))
+            Canvas(modifier = Modifier.fillMaxWidth().height(60.dp)) {
+                if (history.size < 2) return@Canvas
+                val max = history.max().let { if (it < 10f) 100f else it * 1.1f }
+                val min = history.min()
+                val range = if (max == min) 1f else max - min
+                
+                val path = Path()
+                history.forEachIndexed { i, v ->
+                    val x = i / (history.size - 1f) * size.width
+                    val y = size.height - ((v - min) / range) * size.height * 0.8f - size.height * 0.1f
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                drawPath(path, BlueAccent, style = Stroke(4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            }
+        }
     }
 }
 
