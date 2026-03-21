@@ -33,15 +33,15 @@ import kotlinx.coroutines.launch
 
 // ── Theme ─────────────────────────────────────────────────────────
 
-private val BgColor       = Color(0xFF0F1220)
-private val SurfaceColor  = Color(0xFF1A1F2E)
-private val CardColor     = Color(0xFF222840)
-private val PrimaryText   = Color(0xFFD0DCFF)
-private val MutedText     = Color(0xFF5A7090)
-private val BlueAccent    = Color(0xFF4A9EFF)
-private val GreenAccent   = Color(0xFF34D399)
-private val AmberAccent   = Color(0xFFEF9F27)
-private val RedAccent     = Color(0xFFE24B4A)
+private val BgColor       = Color(0xFF0A0D18)
+private val SurfaceColor  = Color(0xFF161B2C)
+private val CardColor     = Color(0xFF161B2C)
+private val TextPrimary   = Color(0xFFE0E8FF)
+private val TextMuted     = Color(0xFF6B7FA5)
+private val BlueAccent    = Color(0xFF5AB0FF)
+private val GreenAccent   = Color(0xFF4ADE80)
+private val AmberAccent   = Color(0xFFFBBF24)
+private val RedAccent     = Color(0xFFF87171)
 private val PurpleAccent  = Color(0xFFA78BFA)
 
 fun pctColor(pct: Float) = when {
@@ -132,113 +132,89 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(BgColor),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text(
-                        state.snapshot?.serverName ?: "Resource Monitor",
-                        color = PrimaryText, fontWeight = FontWeight.Bold, fontSize = 20.sp
-                    )
-                    Text("Oracle Server Dashboard", color = MutedText, fontSize = 13.sp)
+                    Text(state.snapshot?.serverName ?: "Server Dashboard", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                    Text("Live monitoring active", color = TextMuted, fontSize = 12.sp)
                 }
                 IconButton(onClick = onRefresh) {
-                    if (state.isLoading)
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = BlueAccent)
-                    else
-                        Icon(Icons.Default.Refresh, null, tint = MutedText)
-                }
-            }
-        }
-
-        state.error?.let { err ->
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0x33E24B4A)),
-                    shape  = RoundedCornerShape(12.dp)
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Warning, null, tint = RedAccent)
-                        Spacer(Modifier.width(8.dp))
-                        Text(err, color = Color(0xFFE4876E), fontSize = 13.sp)
-                    }
+                    if (state.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = BlueAccent)
+                    else Icon(Icons.Default.Refresh, null, tint = TextMuted)
                 }
             }
         }
 
         state.snapshot?.let { snap ->
-            // Live Chart Section
+            // High-Contrast CPU Chart
             item {
-                SectionLabel("Live CPU Activity (Last 60s)")
+                SectionLabel("CPU TREND (LAST 60S)")
                 Spacer(Modifier.height(8.dp))
                 LiveSparklineCard(history = WidgetStateHolder.state.cpuHistory)
             }
 
-            // OS Gauge grid
+            // High-Contrast Gauges
             item {
-                Spacer(Modifier.height(8.dp))
-                SectionLabel("System Resources")
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    GaugeCard("CPU",  snap.os.cpuPercent,  Modifier.weight(1f))
-                    GaugeCard("RAM",  snap.os.ramPercent,  Modifier.weight(1f))
-                    GaugeCard("DISK", snap.os.diskPercent, Modifier.weight(1f))
+                SectionLabel("RESOURCES")
+                Spacer(Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    GaugeCard("CPU", snap.os.cpu_percent, Modifier.weight(1f))
+                    GaugeCard("RAM", snap.os.ram_percent, Modifier.weight(1f))
+                    GaugeCard("DISK", snap.os.disk_percent, Modifier.weight(1f))
                 }
             }
 
-            // OS detail row
+            // Performance Details
             item {
-                SectionLabel("System Details")
+                SectionLabel("PERFORMANCE")
                 Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatCard("Cores",     "${snap.os.cpuCoreCount}", Modifier.weight(1f))
-                    StatCard("RAM Used",  "${snap.os.ramUsedGb} / ${snap.os.ramTotalGb} GB", Modifier.weight(2f))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatCard("Network Up", "↑${snap.os.net_bytes_sent_mb.toInt()} MB", Modifier.weight(1f))
+                    StatCard("Network Down", "↓${snap.os.net_bytes_recv_mb.toInt()} MB", Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatCard("Disk Used", "${snap.os.diskUsedGb} / ${snap.os.diskTotalGb} GB", Modifier.weight(1f))
-                    StatCard("Network",   "↑ ${snap.os.netSentMb.toInt()} MB  ↓ ${snap.os.netRecvMb.toInt()} MB", Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatCard("Load 1m",  "${snap.os.loadAvg1m}", Modifier.weight(1f))
-                    StatCard("Load 5m",  "${snap.os.loadAvg5m}", Modifier.weight(1f))
-                    StatCard("Load 15m", "${snap.os.loadAvg15m}", Modifier.weight(1f))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatCard("Load 1m", "${snap.os.load_avg_1m}", Modifier.weight(1f))
+                    StatCard("Load 5m", "${snap.os.load_avg_5m}", Modifier.weight(1f))
+                    StatCard("Load 15m", "${snap.os.load_avg_15m}", Modifier.weight(1f))
                 }
             }
 
-            // Oracle section
-            snap.oracle?.let { oracle ->
+            // Capacity
+            item {
+                SectionLabel("CAPACITY")
+                Spacer(Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatCard("CPU Cores", "${snap.os.cpu_core_count}", Modifier.weight(1f))
+                    StatCard("RAM Total", "${snap.os.ram_total_gb.toInt()} GB", Modifier.weight(1f))
+                }
+            }
+
+            // Oracle (If available)
+            snap.oracle?.let { ora ->
                 item {
-                    Spacer(Modifier.height(16.dp))
-                    SectionLabel("Oracle Database")
-                    Spacer(Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        GaugeCard("Sessions",   oracle.sessionPercent,   Modifier.weight(1f))
-                        GaugeCard("Tablespace", oracle.tablespacePercent, Modifier.weight(1f))
+                    SectionLabel("ORACLE DATABASE")
+                    Spacer(Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        GaugeCard("Sess %", ora.session_percent, Modifier.weight(1f))
+                        GaugeCard("Tablespace", ora.tablespace_percent, Modifier.weight(1f))
                     }
                 }
                 item {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatCard("Active Sessions", "${oracle.activeSessions} / ${oracle.maxSessions}", Modifier.weight(1f))
-                        StatCard("Redo / hr",       "${oracle.redoSwitchesPerHour}", Modifier.weight(1f))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatCard("Active Sessions", "${ora.active_sessions}", Modifier.weight(1f))
+                        StatCard("Redo Log /h", "${ora.redo_switches_per_hour}", Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(8.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatCard("Slow Queries",    "${oracle.slowQueriesCount}",    Modifier.weight(1f))
-                        StatCard("DB Status",       oracle.dbStatus,                 Modifier.weight(1f))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatCard("Slow Queries", "${ora.slow_queries_count}", Modifier.weight(1f))
+                        StatCard("DB Status", ora.db_status, Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(8.dp))
-                    StatCard("Version",    oracle.dbVersion, Modifier.fillMaxWidth())
+                    StatCard("DB Version", ora.db_version, Modifier.fillMaxWidth())
                 }
             }
         }
@@ -303,8 +279,8 @@ fun ArcGauge(pct: Float, color: Color, size: Dp) {
         Text(
             "${pct.toInt()}%",
             color      = PrimaryText,
-            fontSize   = 14.sp,
-            fontWeight = FontWeight.Bold
+            fontSize   = 12.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }

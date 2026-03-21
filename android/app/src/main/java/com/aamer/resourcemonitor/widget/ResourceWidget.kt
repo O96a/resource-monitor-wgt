@@ -19,16 +19,16 @@ import androidx.glance.text.*
 import androidx.glance.unit.ColorProvider
 import com.aamer.resourcemonitor.data.models.MetricsSnapshot
 
-// ── Design Tokens ────────────────────────────────────────────────
+// ── Design System (V1.1.0 - Refined) ──────────────────────────────
 
-private val BgDark      = Color(0xFF0F1220)
-private val CardDark    = Color(0xFF1A1F2E)
-private val TextPrimary = Color(0xFFD0DCFF)
-private val TextMuted   = Color(0xFF5A7090)
-private val BlueAccent  = Color(0xFF4A9EFF)
-private val GreenAccent = Color(0xFF34D399)
-private val AmberAccent = Color(0xFFEF9F27)
-private val RedAccent   = Color(0xFFE24B4A)
+private val BgDark      = Color(0xFF0A0D18) // Deeper black for high contrast
+private val CardDark    = Color(0xFF161B2C)
+private val TextPrimary = Color(0xFFE0E8FF)
+private val TextMuted   = Color(0xFF6B7FA5)
+private val BlueAccent  = Color(0xFF5AB0FF)
+private val GreenAccent = Color(0xFF4ADE80)
+private val AmberAccent = Color(0xFFFBBF24)
+private val RedAccent   = Color(0xFFF87171)
 
 private fun percentColor(pct: Float): Color = when {
     pct >= 90 -> RedAccent
@@ -36,7 +36,7 @@ private fun percentColor(pct: Float): Color = when {
     else       -> BlueAccent
 }
 
-// ── Drawing Logic ────────────────────────────────────────────────
+// ── Professional Bitmap Logic ─────────────────────────────────────
 
 fun makeGaugeBitmap(pct: Float, context: Context): BitmapDrawable {
     val size = 300
@@ -45,30 +45,30 @@ fun makeGaugeBitmap(pct: Float, context: Context): BitmapDrawable {
     val cx     = size / 2f
     val cy     = size / 2f
     
-    // Proper scaling to prevent text touching arcs
-    val stroke = size * 0.08f 
-    val padding = stroke * 2.5f
+    // Exact sizing to avoid overlap
+    val stroke = size * 0.07f 
+    val padding = stroke * 3.0f
     val radius = size / 2f - padding
     val rect   = RectF(cx - radius, cy - radius, cx + radius, cy + radius)
 
-    // Background Arc
+    // Track
     val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = stroke; color = 0xFF2A3050.toInt()
+        style = Paint.Style.Stroke; strokeWidth = stroke; color = 0xFF1E253A.toInt()
     }
     canvas.drawArc(rect, -220f, 260f, false, trackPaint)
 
-    // Progress Arc
+    // Fill
     val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND
+        style = Paint.Style.Stroke; strokeWidth = stroke; strokeCap = Paint.Cap.Round
         val c = percentColor(pct)
         color = android.graphics.Color.argb(255, (c.red*255).toInt(), (c.green*255).toInt(), (c.blue*255).toInt())
     }
     canvas.drawArc(rect, -220f, (pct / 100f) * 260f, false, arcPaint)
 
-    // Center Text (Scaled carefully)
+    // Centered percentage
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = size * 0.16f; textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT_BOLD
-        color = 0xFFD0DCFF.toInt()
+        textSize = size * 0.15f; textAlign = Paint.Align.CENTER; typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+        color = 0xFFE0E8FF.toInt()
     }
     val textY = cy - (textPaint.descent() + textPaint.ascent()) / 2
     canvas.drawText("${pct.toInt()}%", cx, textY, textPaint)
@@ -97,14 +97,13 @@ fun makeSparklineBitmap(points: List<Float>, context: Context): BitmapDrawable {
 
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeWidth = 4f; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
-        color = 0xFF4A9EFF.toInt()
+        color = 0xFF5AB0FF.toInt()
     }
     canvas.drawPath(path, paint)
-    
     return BitmapDrawable(context.resources, bmp)
 }
 
-// ── Widget Component ──────────────────────────────────────────────
+// ── Widget Implementation ─────────────────────────────────────────
 
 class ResourceWidget : GlanceAppWidget() {
 
@@ -112,8 +111,8 @@ class ResourceWidget : GlanceAppWidget() {
         setOf(
             DpSize(100.dp, 100.dp),
             DpSize(200.dp, 100.dp),
-            DpSize(300.dp, 150.dp),
-            DpSize(300.dp, 250.dp),
+            DpSize(300.dp, 120.dp),
+            DpSize(300.dp, 220.dp),
             DpSize(400.dp, 400.dp),
         )
     )
@@ -124,8 +123,8 @@ class ResourceWidget : GlanceAppWidget() {
 
     @Composable
     private fun Content() {
-        val state   = WidgetStateHolder.state
-        val size    = LocalSize.current
+        val state = WidgetStateHolder.state
+        val size  = LocalSize.current
         val context = LocalContext.current
 
         GlanceTheme {
@@ -145,15 +144,16 @@ class ResourceWidget : GlanceAppWidget() {
 
 @Composable
 private fun MetricsDashboard(snap: MetricsSnapshot, history: List<Float>, context: Context, size: DpSize) {
-    val showMetrics = size.height >= 120.dp
+    // Show detailed info if height is at least medium
+    val showDetails = size.height >= 120.dp
     val showOracle  = size.width >= 250.dp && snap.oracle != null
-    val showChart   = size.height >= 200.dp
+    val showChart   = size.height >= 180.dp
 
     Column(modifier = GlanceModifier.fillMaxSize()) {
-        // ── Header (Title + Refresh) ──
+        // Header (Server Title + Sync)
         Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = GlanceModifier.defaultWeight()) {
-                Text(snap.serverName, style = TextStyle(color = ColorProvider(TextPrimary), fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                Text(snap.server_name, style = TextStyle(color = ColorProvider(TextPrimary), fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
                 val statusText = if (WidgetStateHolder.state.isSyncing) "Syncing..." else updatedAgo(WidgetStateHolder.state.lastUpdated)
                 Text(statusText, style = TextStyle(color = ColorProvider(if (WidgetStateHolder.state.isSyncing) BlueAccent else TextMuted), fontSize = 8.sp))
             }
@@ -164,56 +164,59 @@ private fun MetricsDashboard(snap: MetricsSnapshot, history: List<Float>, contex
 
         Spacer(GlanceModifier.height(6.dp))
 
-        // ── Primary Gauges ──
+        // Row 1: Primary Gauges (Always show)
         Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            val gSize = if (size.height < 120.dp) 50.dp else 70.dp
-            GaugeCell(context, snap.os.cpuPercent, "CPU", gSize, GlanceModifier.defaultWeight())
-            GaugeCell(context, snap.os.ramPercent, "RAM", gSize, GlanceModifier.defaultWeight())
-            GaugeCell(context, snap.os.diskPercent, "DISK", gSize, GlanceModifier.defaultWeight())
+            val gSize = if (size.height < 120.dp) 55.dp else 70.dp
+            GaugeCell(context, snap.os.cpu_percent, "CPU", gSize, GlanceModifier.defaultWeight())
+            GaugeCell(context, snap.os.ram_percent, "RAM", gSize, GlanceModifier.defaultWeight())
+            GaugeCell(context, snap.os.disk_percent, "DISK", gSize, GlanceModifier.defaultWeight())
             if (showOracle) {
-                GaugeCell(context, snap.oracle!!.sessionPercent, "DB", gSize, GlanceModifier.defaultWeight())
+                GaugeCell(context, snap.oracle!!.session_percent, "DB", gSize, GlanceModifier.defaultWeight())
             }
         }
 
-        if (showMetrics) {
+        if (showDetails) {
             Spacer(GlanceModifier.height(10.dp))
             
-            // ── Metrics Grid (Aligned & Padded Properly) ──
-            Column(modifier = GlanceModifier.fillMaxWidth()) {
-                Row(modifier = GlanceModifier.fillMaxWidth()) {
-                    MetricCard("↑${snap.os.netSentMb.toInt()}M", "UP", GlanceModifier.defaultWeight())
-                    MetricCard("↓${snap.os.netRecvMb.toInt()}M", "DN", GlanceModifier.defaultWeight())
-                    MetricCard("${snap.os.loadAvg1m}", "LOAD", GlanceModifier.defaultWeight())
-                }
+            // Row 2: Basic OS Info (Always show in details)
+            Row(modifier = GlanceModifier.fillMaxWidth()) {
+                MetricCard("↑${snap.os.net_bytes_sent_mb.toInt()}M", "UP", GlanceModifier.defaultWeight())
+                MetricCard("↓${snap.os.net_bytes_recv_mb.toInt()}M", "DN", GlanceModifier.defaultWeight())
+                MetricCard("${snap.os.load_avg_1m}", "LOAD", GlanceModifier.defaultWeight())
+            }
+            
+            Spacer(GlanceModifier.height(4.dp))
+            
+            // Row 3: Capacity Info
+            Row(modifier = GlanceModifier.fillMaxWidth()) {
+                MetricCard("${snap.os.ram_used_gb.toInt()}G", "USED", GlanceModifier.defaultWeight())
+                MetricCard("${snap.os.ram_total_gb.toInt()}G", "TOTAL", GlanceModifier.defaultWeight())
+                MetricCard("${snap.os.cpu_core_count}", "CORE", GlanceModifier.defaultWeight())
+            }
+
+            if (snap.oracle != null) {
+                val ora = snap.oracle
                 Spacer(GlanceModifier.height(4.dp))
                 Row(modifier = GlanceModifier.fillMaxWidth()) {
-                    MetricCard("${snap.os.ramUsedGb.toInt()}G", "RAM", GlanceModifier.defaultWeight())
-                    MetricCard("${snap.os.diskUsedGb.toInt()}G", "DISK", GlanceModifier.defaultWeight())
-                    MetricCard("${snap.os.cpuCoreCount}", "CORES", GlanceModifier.defaultWeight())
-                }
-                
-                if (snap.oracle != null) {
-                    val ora = snap.oracle
-                    Spacer(GlanceModifier.height(4.dp))
-                    Row(modifier = GlanceModifier.fillMaxWidth()) {
-                        MetricCard("${ora.redoSwitchesPerHour}", "REDO", GlanceModifier.defaultWeight(), GreenAccent)
-                        MetricCard("${ora.slowQueriesCount}", "SLOW", GlanceModifier.defaultWeight(), if(ora.slowQueriesCount > 0) AmberAccent else TextMuted)
-                        MetricCard("${ora.tablespacePercent.toInt()}%", "TBSP", GlanceModifier.defaultWeight())
-                    }
+                    MetricCard("${ora.redo_switches_per_hour}", "REDO", GlanceModifier.defaultWeight(), GreenAccent)
+                    MetricCard("${ora.slow_queries_count}", "SLOW", GlanceModifier.defaultWeight(), if(ora.slow_queries_count > 0) AmberAccent else TextMuted)
+                    MetricCard("${ora.tablespace_percent.toInt()}%", "TBSP", GlanceModifier.defaultWeight())
                 }
             }
         }
 
         if (showChart && history.size > 1) {
             Spacer(GlanceModifier.height(10.dp))
-            // ── Live Chart (The 'New' Metric movement) ──
             Box(modifier = GlanceModifier.fillMaxWidth().height(35.dp).padding(horizontal = 4.dp)) {
                 Image(provider = ImageProvider(makeSparklineBitmap(history, context).bitmap), 
-                    contentDescription = "CPU Chart", modifier = GlanceModifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+                    contentDescription = "Chart", modifier = GlanceModifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
             }
         }
         
-        Spacer(GlanceModifier.defaultWeight()) // Ensure bottom padding is natural
+        Spacer(GlanceModifier.defaultWeight())
+        
+        // Version Tag (To verify user is on the right build)
+        Text("v1.1.0", style = TextStyle(color = ColorProvider(TextMuted.copy(alpha = 0.5f)), fontSize = 7.sp))
     }
 }
 
@@ -228,7 +231,7 @@ private fun GaugeCell(context: Context, pct: Float, label: String, size: android
 
 @Composable
 private fun MetricCard(value: String, label: String, modifier: GlanceModifier, valColor: Color = TextPrimary) {
-    Column(modifier = modifier.padding(2.dp).background(ColorProvider(CardDark)).cornerRadius(6.dp).padding(4.dp), 
+    Column(modifier = modifier.padding(1.dp).background(ColorProvider(CardDark)).cornerRadius(6.dp).padding(4.dp), 
         horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = TextStyle(color = ColorProvider(valColor), fontSize = 10.sp, fontWeight = FontWeight.Bold), maxLines = 1)
         Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 7.sp), maxLines = 1)
@@ -246,8 +249,8 @@ private fun LoadingView() {
 private fun ErrorView(msg: String) {
     Column(modifier = GlanceModifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
         Text("Offline", style = TextStyle(color = ColorProvider(RedAccent), fontSize = 13.sp, fontWeight = FontWeight.Bold))
-        Text(msg.take(25), style = TextStyle(color = ColorProvider(TextMuted), fontSize = 10.sp))
-        Spacer(GlanceModifier.height(8.dp))
+        Text(msg.take(20), style = TextStyle(color = ColorProvider(TextMuted), fontSize = 10.sp))
+        Spacer(GlanceModifier.height(6.dp))
         Button("Retry", actionRunCallback<RefreshAction>())
     }
 }
