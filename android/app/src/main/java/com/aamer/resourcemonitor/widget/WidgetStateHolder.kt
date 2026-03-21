@@ -12,6 +12,7 @@ data class WidgetState(
 )
 
 object WidgetStateHolder {
+    private const val MAX_HISTORY = 20
     @Volatile private var _state = WidgetState()
 
     val state: WidgetState get() = _state
@@ -20,10 +21,12 @@ object WidgetStateHolder {
         _state = _state.copy(isSyncing = true, error = null)
     }
 
-    fun update(snapshot: MetricsSnapshot, cpuHistory: List<Float> = emptyList()) {
+    fun update(snapshot: MetricsSnapshot) {
+        val newHistory = (_state.cpuHistory + snapshot.os.cpuPercent).takeLast(MAX_HISTORY)
+        
         _state = WidgetState(
             snapshot = snapshot,
-            cpuHistory = cpuHistory,
+            cpuHistory = newHistory,
             lastUpdated = Instant.now(),
             isSyncing = false,
             error = null

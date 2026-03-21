@@ -30,8 +30,8 @@ class MetricsFetchWorker @AssistedInject constructor(
             val repo     = MetricsRepository.create(config.baseUrl, config.apiKey)
             val snapshot = repo.getSnapshot().getOrThrow()
             
-            // Store the latest snapshot in WidgetStateHolder for Glance to read (empty history)
-            WidgetStateHolder.update(snapshot, emptyList())
+            // Store the latest snapshot in WidgetStateHolder for Glance to read
+            WidgetStateHolder.update(snapshot)
 
             // Trigger Glance widget re-render
             ResourceWidget().updateAll(applicationContext)
