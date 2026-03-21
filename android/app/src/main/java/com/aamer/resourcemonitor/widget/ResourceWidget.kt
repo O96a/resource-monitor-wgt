@@ -58,7 +58,7 @@ fun makeGaugeBitmap(pct: Float, context: Context): BitmapDrawable {
     val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND
         val c = percentColor(pct)
-        color = Color.argb(255, (c.red*255).toInt(), (c.green*255).toInt(), (c.blue*255).toInt()).hashCode()
+        color = android.graphics.Color.argb(255, (c.red*255).toInt(), (c.green*255).toInt(), (c.blue*255).toInt())
     }
     canvas.drawArc(rect, -220f, (pct / 100f) * 260f, false, arcPaint)
 
