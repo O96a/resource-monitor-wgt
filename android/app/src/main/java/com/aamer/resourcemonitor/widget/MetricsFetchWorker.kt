@@ -38,7 +38,7 @@ class MetricsFetchWorker @AssistedInject constructor(
 
             Result.success()
         } catch (e: Exception) {
-            if (runAttemptCount < 3) {
+            if (runAttemptCount < 2) {
                 Result.retry()
             } else {
                 WidgetStateHolder.setError(e.message ?: "Connection failed")
