@@ -57,7 +57,7 @@ fun makeGaugeBitmap(pct: Float, context: Context): BitmapDrawable {
     canvas.drawArc(rect, -220f, 260f, false, trackPaint)
 
     val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.ROUND
+        style = Paint.Style.STROKE; strokeWidth = stroke; strokeCap = Paint.Cap.Round
         val c = percentColor(pct)
         color = android.graphics.Color.argb(255, (c.red*255).toInt(), (c.green*255).toInt(), (c.blue*255).toInt())
     }
@@ -93,7 +93,7 @@ fun makeSparklineBitmap(points: List<Float>, context: Context): BitmapDrawable {
     }
 
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = 4f; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
+        style = Paint.Style.STROKE; strokeWidth = 4f; strokeCap = Paint.Cap.Round; strokeJoin = Paint.Join.ROUND
         color = 0xFF4A9EFF.toInt()
     }
     canvas.drawPath(path, paint)
@@ -105,15 +105,7 @@ fun makeSparklineBitmap(points: List<Float>, context: Context): BitmapDrawable {
 
 class ResourceWidget : GlanceAppWidget() {
 
-    override val sizeMode = SizeMode.Responsive(
-        setOf(
-            DpSize(100.dp, 100.dp),
-            DpSize(200.dp, 100.dp),
-            DpSize(300.dp, 150.dp),
-            DpSize(300.dp, 250.dp),
-            DpSize(400.dp, 400.dp),
-        )
-    )
+    override val sizeMode = SizeMode.Exact // Switch to Exact for better precision during resize
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent { Content() }
@@ -142,11 +134,12 @@ class ResourceWidget : GlanceAppWidget() {
 
 @Composable
 private fun MetricsDashboard(snap: MetricsSnapshot, history: List<Float>, context: Context, size: DpSize) {
-    val showMetrics = size.height >= 120.dp
+    val showMetrics = size.height >= 130.dp
     val showOracle  = size.width >= 250.dp && snap.oracle != null
-    val showChart   = size.height >= 200.dp
+    val showChart   = size.height >= 220.dp
 
     Column(modifier = GlanceModifier.fillMaxSize()) {
+        // ── Header (Title + Refresh) ──
         Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(snap.serverName, style = TextStyle(color = ColorProvider(TextPrimary), fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
@@ -158,20 +151,24 @@ private fun MetricsDashboard(snap: MetricsSnapshot, history: List<Float>, contex
             }
         }
 
-        Spacer(GlanceModifier.height(6.dp))
+        Spacer(GlanceModifier.height(4.dp))
 
-        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            val gSize = if (size.height < 120.dp) 50.dp else 70.dp
-            GaugeCell(context, snap.os.cpuPercent, "CPU", gSize, GlanceModifier.defaultWeight())
-            GaugeCell(context, snap.os.ramPercent, "RAM", gSize, GlanceModifier.defaultWeight())
-            GaugeCell(context, snap.os.diskPercent, "DISK", gSize, GlanceModifier.defaultWeight())
+        // ── Primary Gauges (Dynamically Scaling) ──
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().defaultWeight(), 
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // We use defaultWeight() on cells to ensure they grow, and fillMaxHeight() on Images
+            GaugeCell(context, snap.os.cpuPercent, "CPU", GlanceModifier.defaultWeight())
+            GaugeCell(context, snap.os.ramPercent, "RAM", GlanceModifier.defaultWeight())
+            GaugeCell(context, snap.os.diskPercent, "DISK", GlanceModifier.defaultWeight())
             if (showOracle) {
-                GaugeCell(context, snap.oracle!!.sessionPercent, "DB", gSize, GlanceModifier.defaultWeight())
+                GaugeCell(context, snap.oracle!!.sessionPercent, "DB", GlanceModifier.defaultWeight())
             }
         }
 
         if (showMetrics) {
-            Spacer(GlanceModifier.height(10.dp))
+            Spacer(GlanceModifier.height(8.dp))
             Column(modifier = GlanceModifier.fillMaxWidth()) {
                 Row(modifier = GlanceModifier.fillMaxWidth()) {
                     MetricCard("↑${snap.os.netSentMb.toInt()}M", "UP", GlanceModifier.defaultWeight())
@@ -199,22 +196,41 @@ private fun MetricsDashboard(snap: MetricsSnapshot, history: List<Float>, contex
 
         if (showChart && history.size > 1) {
             Spacer(GlanceModifier.height(10.dp))
-            Box(modifier = GlanceModifier.fillMaxWidth().height(35.dp).padding(horizontal = 4.dp)) {
-                Image(provider = ImageProvider(makeSparklineBitmap(history, context).bitmap), 
-                    contentDescription = "CPU Chart", modifier = GlanceModifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+            // ── Boxed Live Chart ──
+            Box(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .height(45.dp)
+                    .background(ColorProvider(CardDark))
+                    .cornerRadius(8.dp)
+                    .padding(4.dp)
+            ) {
+                Image(
+                    provider = ImageProvider(makeSparklineBitmap(history, context).bitmap), 
+                    contentDescription = "CPU Chart", 
+                    modifier = GlanceModifier.fillMaxSize(), 
+                    contentScale = ContentScale.FillBounds
+                )
             }
         }
         
-        Spacer(GlanceModifier.defaultWeight())
-        Text("v1.1.0", style = TextStyle(color = ColorProvider(TextMuted.copy(alpha = 0.5f)), fontSize = 7.sp))
+        Spacer(GlanceModifier.height(4.dp))
+        Text("v1.1.1", style = TextStyle(color = ColorProvider(TextMuted.copy(alpha = 0.4f)), fontSize = 7.sp))
     }
 }
 
 @Composable
-private fun GaugeCell(context: Context, pct: Float, label: String, size: androidx.compose.ui.unit.Dp, modifier: GlanceModifier) {
+private fun GaugeCell(context: Context, pct: Float, label: String, modifier: GlanceModifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(provider = ImageProvider(makeGaugeBitmap(pct, context).bitmap), contentDescription = label,
-            modifier = GlanceModifier.size(size), contentScale = ContentScale.Fit)
+        // Remove fixed size, use fillMaxWidth and height weight
+        Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
+            Image(
+                provider = ImageProvider(makeGaugeBitmap(pct, context).bitmap), 
+                contentDescription = label,
+                modifier = GlanceModifier.fillMaxSize(), // Scale to fill the weight-based container
+                contentScale = ContentScale.Fit
+            )
+        }
         Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 9.sp, fontWeight = FontWeight.Bold))
     }
 }
