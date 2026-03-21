@@ -64,8 +64,8 @@ class MainActivity : ComponentActivity() {
                     background = BgColor,
                     surface = SurfaceColor,
                     primary = BlueAccent,
-                    onBackground = PrimaryText,
-                    onSurface = PrimaryText,
+                    onBackground = TextPrimary,
+                    onSurface = TextPrimary,
                 )
             ) {
                 ResourceMonitorApp(vm)
@@ -161,9 +161,9 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
                 SectionLabel("RESOURCES")
                 Spacer(Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GaugeCard("CPU", snap.os.cpu_percent, Modifier.weight(1f))
-                    GaugeCard("RAM", snap.os.ram_percent, Modifier.weight(1f))
-                    GaugeCard("DISK", snap.os.disk_percent, Modifier.weight(1f))
+                    GaugeCard("CPU", snap.os.cpuPercent, Modifier.weight(1f))
+                    GaugeCard("RAM", snap.os.ramPercent, Modifier.weight(1f))
+                    GaugeCard("DISK", snap.os.diskPercent, Modifier.weight(1f))
                 }
             }
 
@@ -172,14 +172,14 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
                 SectionLabel("PERFORMANCE")
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatCard("Network Up", "↑${snap.os.net_bytes_sent_mb.toInt()} MB", Modifier.weight(1f))
-                    StatCard("Network Down", "↓${snap.os.net_bytes_recv_mb.toInt()} MB", Modifier.weight(1f))
+                    StatCard("Network Up", "↑${snap.os.netSentMb.toInt()} MB", Modifier.weight(1f))
+                    StatCard("Network Down", "↓${snap.os.netRecvMb.toInt()} MB", Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatCard("Load 1m", "${snap.os.load_avg_1m}", Modifier.weight(1f))
-                    StatCard("Load 5m", "${snap.os.load_avg_5m}", Modifier.weight(1f))
-                    StatCard("Load 15m", "${snap.os.load_avg_15m}", Modifier.weight(1f))
+                    StatCard("Load 1m", "${snap.os.loadAvg1m}", Modifier.weight(1f))
+                    StatCard("Load 5m", "${snap.os.loadAvg5m}", Modifier.weight(1f))
+                    StatCard("Load 15m", "${snap.os.loadAvg15m}", Modifier.weight(1f))
                 }
             }
 
@@ -188,8 +188,8 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
                 SectionLabel("CAPACITY")
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatCard("CPU Cores", "${snap.os.cpu_core_count}", Modifier.weight(1f))
-                    StatCard("RAM Total", "${snap.os.ram_total_gb.toInt()} GB", Modifier.weight(1f))
+                    StatCard("CPU Cores", "${snap.os.cpuCoreCount}", Modifier.weight(1f))
+                    StatCard("RAM Total", "${snap.os.ramTotalGb.toInt()} GB", Modifier.weight(1f))
                 }
             }
 
@@ -199,22 +199,22 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
                     SectionLabel("ORACLE DATABASE")
                     Spacer(Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        GaugeCard("Sess %", ora.session_percent, Modifier.weight(1f))
-                        GaugeCard("Tablespace", ora.tablespace_percent, Modifier.weight(1f))
+                        GaugeCard("Sess %", ora.sessionPercent, Modifier.weight(1f))
+                        GaugeCard("Tablespace", ora.tablespacePercent, Modifier.weight(1f))
                     }
                 }
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatCard("Active Sessions", "${ora.active_sessions}", Modifier.weight(1f))
-                        StatCard("Redo Log /h", "${ora.redo_switches_per_hour}", Modifier.weight(1f))
+                        StatCard("Active Sessions", "${ora.activeSessions}", Modifier.weight(1f))
+                        StatCard("Redo Log /h", "${ora.redoSwitchesPerHour}", Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatCard("Slow Queries", "${ora.slow_queries_count}", Modifier.weight(1f))
-                        StatCard("DB Status", ora.db_status, Modifier.weight(1f))
+                        StatCard("Slow Queries", "${ora.slowQueriesCount}", Modifier.weight(1f))
+                        StatCard("DB Status", ora.dbStatus, Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(8.dp))
-                    StatCard("DB Version", ora.db_version, Modifier.fillMaxWidth())
+                    StatCard("DB Version", ora.dbVersion, Modifier.fillMaxWidth())
                 }
             }
         }
@@ -223,7 +223,7 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
 
 @Composable
 fun SectionLabel(text: String) {
-    Text(text, color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+    Text(text, color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold,
         letterSpacing = 1.sp)
 }
 
@@ -241,7 +241,7 @@ fun GaugeCard(label: String, pct: Float, modifier: Modifier = Modifier) {
         ) {
             ArcGauge(pct, color, size = 80.dp)
             Spacer(Modifier.height(6.dp))
-            Text(label, color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -278,7 +278,7 @@ fun ArcGauge(pct: Float, color: Color, size: Dp) {
         }
         Text(
             "${pct.toInt()}%",
-            color      = PrimaryText,
+            color      = TextPrimary,
             fontSize   = 12.sp,
             fontWeight = FontWeight.Medium
         )
@@ -298,7 +298,7 @@ fun LiveSparklineCard(history: List<Float>) {
             ) {
                 Text("${history.lastOrNull()?.toInt() ?: 0}%",
                     color = BlueAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text("Real-time CPU", color = MutedText, fontSize = 12.sp)
+                Text("Real-time CPU", color = TextMuted, fontSize = 12.sp)
             }
             Spacer(Modifier.height(12.dp))
             Canvas(modifier = Modifier.fillMaxWidth().height(60.dp)) {
@@ -327,9 +327,9 @@ fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
         shape    = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
-            Text(label, color = MutedText, fontSize = 10.sp)
+            Text(label, color = TextMuted, fontSize = 10.sp)
             Spacer(Modifier.height(2.dp))
-            Text(value, color = PrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(value, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -343,8 +343,8 @@ fun AlarmsScreen(alarms: List<Alarm>, onAck: (String) -> Unit) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.CheckCircle, null, tint = GreenAccent, modifier = Modifier.size(48.dp))
                 Spacer(Modifier.height(12.dp))
-                Text("All clear", color = PrimaryText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text("No active alarms", color = MutedText, fontSize = 13.sp)
+                Text("All clear", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("No active alarms", color = TextMuted, fontSize = 13.sp)
             }
         }
         return
@@ -355,7 +355,7 @@ fun AlarmsScreen(alarms: List<Alarm>, onAck: (String) -> Unit) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item { Text("Active Alarms", color = PrimaryText, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+        item { Text("Active Alarms", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
         items(alarms, key = { it.id }) { alarm ->
             AlarmCard(alarm, onAck)
         }
@@ -383,12 +383,12 @@ fun AlarmCard(alarm: Alarm, onAck: (String) -> Unit) {
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(alarm.message, color = PrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(alarm.message, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text("${alarm.value}% / threshold ${alarm.threshold}%",
-                    color = MutedText, fontSize = 11.sp)
+                    color = TextMuted, fontSize = 11.sp)
             }
             TextButton(onClick = { onAck(alarm.id) }) {
-                Text("Dismiss", color = MutedText, fontSize = 12.sp)
+                Text("Dismiss", color = TextMuted, fontSize = 12.sp)
             }
         }
     }
@@ -414,9 +414,9 @@ fun SettingsScreen(vm: DashboardViewModel) {
             .padding(24.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Settings", color = PrimaryText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("Settings", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
-        Text("Configure your Oracle server connection", color = MutedText, fontSize = 13.sp)
+        Text("Configure your Oracle server connection", color = TextMuted, fontSize = 13.sp)
         Spacer(Modifier.height(24.dp))
 
         SettingsField("Server URL", "http://192.168.1.100:8080", baseUrl)    { baseUrl    = it; saved = false }
@@ -440,7 +440,7 @@ fun SettingsScreen(vm: DashboardViewModel) {
         Spacer(Modifier.height(16.dp))
         HorizontalDivider(color = Color(0xFF2A3050))
         Spacer(Modifier.height(16.dp))
-        Text("Quick start", color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text("Quick start", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(
             "1. Copy server/ directory to your Oracle server\n" +
@@ -449,7 +449,7 @@ fun SettingsScreen(vm: DashboardViewModel) {
             "4. python main.py\n" +
             "5. Enter the server URL and API key above\n" +
             "6. Long-press homescreen → Widgets → Resource Monitor",
-            color = MutedText, fontSize = 12.sp, lineHeight = 20.sp
+            color = TextMuted, fontSize = 12.sp, lineHeight = 20.sp
         )
     }
 }
@@ -460,7 +460,7 @@ fun SettingsField(
     isPassword: Boolean = false, onValueChange: (String) -> Unit
 ) {
     Column {
-        Text(label, color = MutedText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         OutlinedTextField(
             value = value,
@@ -471,8 +471,8 @@ fun SettingsField(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor   = BlueAccent,
                 unfocusedBorderColor = Color(0xFF2A3050),
-                focusedTextColor     = PrimaryText,
-                unfocusedTextColor   = PrimaryText,
+                focusedTextColor     = TextPrimary,
+                unfocusedTextColor   = TextPrimary,
                 cursorColor          = BlueAccent,
             ),
             shape = RoundedCornerShape(10.dp),
@@ -493,11 +493,11 @@ fun SetupPrompt() {
         ) {
             Icon(Icons.Default.Settings, null, tint = BlueAccent, modifier = Modifier.size(52.dp))
             Spacer(Modifier.height(16.dp))
-            Text("Setup required", color = PrimaryText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("Setup required", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             Text(
                 "Go to Settings and enter your Oracle server URL and API key to begin monitoring.",
-                color = MutedText, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                color = TextMuted, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
     }
