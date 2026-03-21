@@ -50,13 +50,37 @@ class MetricsFetchWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "resource_monitor_fetch"
+        private const val PERIODIC_WORK_NAME = "resource_monitor_periodic"
+
+        fun schedule(context: Context) {
+            val request = PeriodicWorkRequestBuilder<MetricsFetchWorker>(
+                repeatInterval = 15,
+                repeatIntervalTimeUnit = java.util.concurrent.TimeUnit.MINUTES
+            )
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                )
+                .build()
+            
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                PERIODIC_WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                request
+            )
+        }
+
+        fun cancel(context: Context) {
+            WorkManager.getInstance(context).cancelUniqueWork(PERIODIC_WORK_NAME)
+        }
 
         fun fetchNow(context: Context) {
             WidgetStateHolder.startSync()
-            // Try to update UI immediately to show 'Syncing...'
+            // Immediately update the widget if possible
             try {
-                // This might not work in all Glance versions/devices, but it's worth a try
-                // or we rely on the next render.
+                // In a real app, you'd trigger a broadcast or call GlanceAppWidgetManager().updateAll()
+                // but since we are in a static context, we rely on the caller to update if they need immediate feedback.
             } catch (_: Exception) {}
 
             val request = OneTimeWorkRequestBuilder<MetricsFetchWorker>()

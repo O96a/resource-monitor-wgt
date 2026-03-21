@@ -85,11 +85,11 @@ class ResourceWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Responsive(
         setOf(
-            DpSize(120.dp, 60.dp),    // Smallest
-            DpSize(180.dp, 110.dp),   // 2x1
-            DpSize(250.dp, 110.dp),   // 3x1
-            DpSize(320.dp, 180.dp),   // 4x2
-            DpSize(400.dp, 260.dp),   // 5x3
+            DpSize(100.dp, 50.dp),    // 1x1
+            DpSize(180.dp, 100.dp),   // 2x1
+            DpSize(250.dp, 100.dp),   // 3x1
+            DpSize(300.dp, 180.dp),   // 4x2
+            DpSize(400.dp, 250.dp),   // 5x3
             DpSize(400.dp, 400.dp),   // 5x5+
         )
     )
@@ -104,29 +104,28 @@ class ResourceWidget : GlanceAppWidget() {
         val state   = WidgetStateHolder.state
         val size    = LocalSize.current
 
-        // Determine available space
-        val isWide = size.width >= 250.dp
-        val isTall = size.height >= 180.dp
-        val isXLarge = size.width >= 350.dp && size.height >= 300.dp
+        val isSmall = size.height < 120.dp
+        val isWide  = size.width >= 250.dp
+        val isFull  = size.height >= 240.dp
 
         GlanceTheme {
             Box(
                 modifier = GlanceModifier
                     .fillMaxSize()
                     .background(ColorProvider(BgDark))
-                    .cornerRadius(16.dp)
-                    .padding(8.dp)
+                    .cornerRadius(12.dp)
+                    .padding(4.dp)
             ) {
                 when {
-                    state.snapshot == null && state.error != null -> ErrorView(state.error)
-                    state.snapshot == null                        -> LoadingView()
+                    state.error != null -> ErrorView(state.error)
+                    state.snapshot == null -> LoadingView()
                     else -> MetricsView(
                         snapshot = state.snapshot,
                         context  = context,
                         size     = size,
+                        isSmall  = isSmall,
                         isWide   = isWide,
-                        isTall   = isTall,
-                        isXLarge = isXLarge
+                        isFull   = isFull
                     )
                 }
             }
@@ -135,148 +134,143 @@ class ResourceWidget : GlanceAppWidget() {
 }
 
 @Composable
-private fun LoadingView() {
-    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Collecting…", style = TextStyle(color = ColorProvider(TextMuted), fontSize = 12.sp))
-    }
-}
-
-@Composable
-private fun ErrorView(message: String) {
-    Column(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Connection error", style = TextStyle(color = ColorProvider(Color(0xFFE24B4A)), fontSize = 13.sp, fontWeight = FontWeight.Bold))
-        Spacer(GlanceModifier.height(4.dp))
-        Text(message.take(60), style = TextStyle(color = ColorProvider(TextMuted), fontSize = 11.sp))
-    }
-}
-
-@Composable
 private fun MetricsView(
     snapshot: MetricsSnapshot,
     context: Context,
     size: DpSize,
+    isSmall: Boolean,
     isWide: Boolean,
-    isTall: Boolean,
-    isXLarge: Boolean
+    isFull: Boolean
 ) {
     val os     = snapshot.os
     val oracle = snapshot.oracle
 
-    Column(modifier = GlanceModifier.fillMaxSize()) {
-        // ── Header ────────────────────────────────────────────
+    Column(modifier = GlanceModifier.fillMaxSize().padding(4.dp)) {
+        // ── Header (Server Name + Sync status + Refresh) ──────
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                snapshot.serverName,
-                style = TextStyle(color = ColorProvider(TextPrimary), 
-                    fontSize = if (size.width < 150.dp) 10.sp else 12.sp, 
-                    fontWeight = FontWeight.Bold),
-                modifier = GlanceModifier.defaultWeight()
-            )
-            if (WidgetStateHolder.state.isSyncing) {
-                Text("Syncing...", style = TextStyle(color = ColorProvider(BlueAccent), fontSize = 10.sp))
-            } else if (size.width > 180.dp) {
-                Text(updatedAgo(WidgetStateHolder.state.lastUpdated), style = TextStyle(color = ColorProvider(TextMuted), fontSize = 9.sp))
+            Column(modifier = GlanceModifier.defaultWeight()) {
+                Text(
+                    snapshot.serverName,
+                    style = TextStyle(color = ColorProvider(TextPrimary), 
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                    maxLines = 1
+                )
+                if (WidgetStateHolder.state.isSyncing) {
+                    Text("Syncing...", style = TextStyle(color = ColorProvider(BlueAccent), fontSize = 9.sp))
+                } else {
+                    Text(updatedAgo(WidgetStateHolder.state.lastUpdated), 
+                        style = TextStyle(color = ColorProvider(TextMuted), fontSize = 9.sp))
+                }
             }
-            Spacer(GlanceModifier.width(4.dp))
-            Image(
-                provider = ImageProvider(android.R.drawable.ic_popup_sync),
-                contentDescription = "Refresh",
-                modifier = GlanceModifier.size(16.dp).clickable(actionRunCallback<RefreshAction>())
-            )
+            
+            // Larger touch target for refresh
+            Box(
+                modifier = GlanceModifier.size(32.dp).clickable(actionRunCallback<RefreshAction>()),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    provider = ImageProvider(android.R.drawable.ic_popup_sync),
+                    contentDescription = "Refresh",
+                    modifier = GlanceModifier.size(20.dp)
+                )
+            }
         }
 
-        Spacer(GlanceModifier.height(if (size.height < 100.dp) 4.dp else 8.dp))
+        Spacer(GlanceModifier.height(4.dp))
 
-        // ── Gauges Row (CPU, RAM, DISK, [SESS]) ───────────────
+        // ── Gauges Section ────────────────────────────────────
         Row(
             modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            GaugeCell(context, os.cpuPercent, "CPU", GlanceModifier.defaultWeight())
-            GaugeCell(context, os.ramPercent, "RAM", GlanceModifier.defaultWeight())
-            GaugeCell(context, os.diskPercent, "DISK", GlanceModifier.defaultWeight())
+            val gaugeHeight = if (isSmall) 50.dp else 85.dp
+            
+            GaugeCell(context, os.cpuPercent, "CPU", gaugeHeight, GlanceModifier.defaultWeight())
+            GaugeCell(context, os.ramPercent, "RAM", gaugeHeight, GlanceModifier.defaultWeight())
+            GaugeCell(context, os.diskPercent, "DSK", gaugeHeight, GlanceModifier.defaultWeight())
+            
             if (oracle != null && isWide) {
-                GaugeCell(context, oracle.sessionPercent, "SESS", GlanceModifier.defaultWeight())
+                GaugeCell(context, oracle.sessionPercent, "DB", gaugeHeight, GlanceModifier.defaultWeight())
             }
         }
 
-        // ── Secondary Info ────────────────────────────────────
-        if (isTall) {
-            Spacer(GlanceModifier.height(8.dp))
-            // Row 1: Load and Network
-            Row(modifier = GlanceModifier.fillMaxWidth()) {
-                StatCard("Load", "${os.loadAvg1m}", GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.width(4.dp))
-                StatCard("Net ↑", "${os.netSentMb.toInt()}M", GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.width(4.dp))
-                StatCard("Net ↓", "${os.netRecvMb.toInt()}M", GlanceModifier.defaultWeight())
-            }
+        // ── Metrics Grid ──────────────────────────────────────
+        if (!isSmall) {
+            Spacer(GlanceModifier.height(6.dp))
             
-            if (isXLarge) {
+            // Row 1: Net & Load
+            Row(modifier = GlanceModifier.fillMaxWidth()) {
+                StatCard("↑ ${os.netSentMb.toInt()}M", "NET", GlanceModifier.defaultWeight())
+                Spacer(GlanceModifier.width(4.dp))
+                StatCard("↓ ${os.netRecvMb.toInt()}M", "NET", GlanceModifier.defaultWeight())
+                Spacer(GlanceModifier.width(4.dp))
+                StatCard("${os.loadAvg1m}", "LOAD", GlanceModifier.defaultWeight())
+            }
+
+            if (isFull) {
                 Spacer(GlanceModifier.height(4.dp))
                 // Row 2: Capacity details
                 Row(modifier = GlanceModifier.fillMaxWidth()) {
-                    StatCard("RAM", "${os.ramUsedGb.toInt()}/${os.ramTotalGb.toInt()}G", GlanceModifier.defaultWeight())
+                    StatCard("${os.ramUsedGb.toInt()}/${os.ramTotalGb.toInt()}G", "RAM", GlanceModifier.defaultWeight())
                     Spacer(GlanceModifier.width(4.dp))
-                    StatCard("Disk", "${os.diskUsedGb.toInt()}/${os.diskTotalGb.toInt()}G", GlanceModifier.defaultWeight())
+                    StatCard("${os.diskUsedGb.toInt()}/${os.diskTotalGb.toInt()}G", "DISK", GlanceModifier.defaultWeight())
                     Spacer(GlanceModifier.width(4.dp))
-                    StatCard("Cores", "${os.cpuCoreCount}", GlanceModifier.defaultWeight())
+                    StatCard("${os.cpuCoreCount}", "CORES", GlanceModifier.defaultWeight())
                 }
                 
                 if (oracle != null) {
                     Spacer(GlanceModifier.height(4.dp))
                     // Row 3: Oracle details
                     Row(modifier = GlanceModifier.fillMaxWidth()) {
-                        StatCard("Tablespace", "${oracle.tablespacePercent.toInt()}%", GlanceModifier.defaultWeight())
+                        StatCard("${oracle.tablespacePercent.toInt()}%", "TBSP", GlanceModifier.defaultWeight())
                         Spacer(GlanceModifier.width(4.dp))
-                        StatCard("DB Status", oracle.dbStatus, GlanceModifier.defaultWeight())
+                        StatCard(oracle.dbStatus, "STATUS", GlanceModifier.defaultWeight())
                         Spacer(GlanceModifier.width(4.dp))
-                        StatCard("Sessions", "${oracle.activeSessions}/${oracle.maxSessions}", GlanceModifier.defaultWeight())
+                        StatCard("${oracle.activeSessions}/${oracle.maxSessions}", "SESS", GlanceModifier.defaultWeight())
                     }
                 }
             }
         }
 
-        // ── Alarm Bar ─────────────────────────────────────────
-        val alarms = buildList {
+        // ── Alarms ────────────────────────────────────────────
+        val activeAlarms = buildList {
             if (os.cpuPercent >= 85f) add("CPU")
             if (os.ramPercent >= 90f) add("RAM")
             if (os.diskPercent >= 80f) add("DSK")
             oracle?.let { if (it.tablespacePercent >= 85f) add("DB") }
         }
-        if (alarms.isNotEmpty() && size.height > 120.dp) {
-            Spacer(GlanceModifier.height(6.dp))
+        
+        if (activeAlarms.isNotEmpty()) {
+            Spacer(GlanceModifier.height(4.dp))
             Box(
-                modifier = GlanceModifier.fillMaxWidth().background(ColorProvider(Color(0x44E24B4A))).cornerRadius(4.dp).padding(4.dp),
+                modifier = GlanceModifier.fillMaxWidth().background(ColorProvider(Color(0x66E24B4A))).cornerRadius(4.dp).padding(2.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("ALARM: ${alarms.joinToString(", ")}", style = TextStyle(color = ColorProvider(Color(0xFFFFAAAA)), fontSize = 10.sp, fontWeight = FontWeight.Bold))
+                Text("⚠ ${activeAlarms.joinToString(", ")}", 
+                    style = TextStyle(color = ColorProvider(Color.White), fontSize = 9.sp, fontWeight = FontWeight.Bold))
             }
         }
     }
 }
 
 @Composable
-private fun StatCard(label: String, value: String, modifier: GlanceModifier = GlanceModifier) {
+private fun StatCard(value: String, label: String, modifier: GlanceModifier = GlanceModifier) {
     Column(
-        modifier = modifier.background(ColorProvider(CardDark)).cornerRadius(6.dp).padding(4.dp),
+        modifier = modifier.background(ColorProvider(CardDark)).cornerRadius(4.dp).padding(vertical = 4.dp, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(value, style = TextStyle(color = ColorProvider(TextPrimary), fontSize = 10.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-        Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 8.sp), maxLines = 1)
+        Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 7.sp), maxLines = 1)
     }
 }
 
 @Composable
-private fun GaugeCell(context: Context, pct: Float, label: String, modifier: GlanceModifier = GlanceModifier) {
-    val size = LocalSize.current
-    val gaugeHeight = if (size.height < 120.dp) 40.dp else 60.dp
-    
+private fun GaugeCell(context: Context, pct: Float, label: String, height: androidx.compose.ui.unit.Dp, modifier: GlanceModifier = GlanceModifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = GlanceModifier.fillMaxWidth().height(gaugeHeight), contentAlignment = Alignment.Center) {
+        Box(modifier = GlanceModifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
             Image(
                 provider = ImageProvider(makeGaugeBitmap(pct, context).bitmap),
                 contentDescription = "$label $pct%",
@@ -284,9 +278,7 @@ private fun GaugeCell(context: Context, pct: Float, label: String, modifier: Gla
                 contentScale = ContentScale.Fit
             )
         }
-        if (size.height > 80.dp) {
-            Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 9.sp, fontWeight = FontWeight.Bold))
-        }
+        Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 8.sp, fontWeight = FontWeight.Bold))
     }
 }
 
@@ -307,6 +299,7 @@ class ResourceWidgetReceiver : GlanceAppWidgetReceiver() {
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
+        MetricsFetchWorker.schedule(context)
         MetricsFetchWorker.fetchNow(context)
     }
 
@@ -317,6 +310,11 @@ class ResourceWidgetReceiver : GlanceAppWidgetReceiver() {
     ) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         MetricsFetchWorker.fetchNow(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        MetricsFetchWorker.cancel(context)
     }
 }
 

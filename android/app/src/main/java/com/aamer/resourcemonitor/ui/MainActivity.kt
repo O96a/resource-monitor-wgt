@@ -188,11 +188,18 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
 
             // OS detail row
             item {
+                SectionLabel("System Details")
+                Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatCard("RAM Used",  "${snap.os.ramUsedGb}  / ${snap.os.ramTotalGb} GB", Modifier.weight(1f))
-                    StatCard("Disk Used", "${snap.os.diskUsedGb} / ${snap.os.diskTotalGb} GB", Modifier.weight(1f))
+                    StatCard("Cores",     "${snap.os.cpuCoreCount}", Modifier.weight(1f))
+                    StatCard("RAM Used",  "${snap.os.ramUsedGb} / ${snap.os.ramTotalGb} GB", Modifier.weight(2f))
                 }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StatCard("Disk Used", "${snap.os.diskUsedGb} / ${snap.os.diskTotalGb} GB", Modifier.weight(1f))
+                    StatCard("Network",   "↑ ${snap.os.netSentMb.toInt()} MB  ↓ ${snap.os.netRecvMb.toInt()} MB", Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     StatCard("Load 1m",  "${snap.os.loadAvg1m}", Modifier.weight(1f))
                     StatCard("Load 5m",  "${snap.os.loadAvg5m}", Modifier.weight(1f))
@@ -203,7 +210,7 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
             // Oracle section
             snap.oracle?.let { oracle ->
                 item {
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(16.dp))
                     SectionLabel("Oracle Database")
                     Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -215,13 +222,14 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         StatCard("Active Sessions", "${oracle.activeSessions} / ${oracle.maxSessions}", Modifier.weight(1f))
                         StatCard("Redo / hr",       "${oracle.redoSwitchesPerHour}", Modifier.weight(1f))
-                        StatCard("Slow Queries",    "${oracle.slowQueriesCount}",    Modifier.weight(1f))
                     }
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatCard("DB Status",  oracle.dbStatus,  Modifier.weight(1f))
-                        StatCard("Version",    oracle.dbVersion, Modifier.weight(2f))
+                        StatCard("Slow Queries",    "${oracle.slowQueriesCount}",    Modifier.weight(1f))
+                        StatCard("DB Status",       oracle.dbStatus,                 Modifier.weight(1f))
                     }
+                    Spacer(Modifier.height(8.dp))
+                    StatCard("Version",    oracle.dbVersion, Modifier.fillMaxWidth())
                 }
             }
         }
