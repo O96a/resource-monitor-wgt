@@ -52,6 +52,13 @@ class MetricsFetchWorker @AssistedInject constructor(
         private const val WORK_NAME = "resource_monitor_fetch"
 
         fun fetchNow(context: Context) {
+            WidgetStateHolder.startSync()
+            // Try to update UI immediately to show 'Syncing...'
+            try {
+                // This might not work in all Glance versions/devices, but it's worth a try
+                // or we rely on the next render.
+            } catch (_: Exception) {}
+
             val request = OneTimeWorkRequestBuilder<MetricsFetchWorker>()
                 .setConstraints(
                     Constraints.Builder()

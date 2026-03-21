@@ -7,6 +7,7 @@ data class WidgetState(
     val snapshot: MetricsSnapshot? = null,
     val cpuHistory: List<Float> = emptyList(),
     val lastUpdated: Instant? = null,
+    val isSyncing: Boolean = false,
     val error: String? = null
 )
 
@@ -15,16 +16,21 @@ object WidgetStateHolder {
 
     val state: WidgetState get() = _state
 
+    fun startSync() {
+        _state = _state.copy(isSyncing = true, error = null)
+    }
+
     fun update(snapshot: MetricsSnapshot, cpuHistory: List<Float> = emptyList()) {
         _state = WidgetState(
             snapshot = snapshot,
             cpuHistory = cpuHistory,
             lastUpdated = Instant.now(),
+            isSyncing = false,
             error = null
         )
     }
 
     fun setError(message: String) {
-        _state = _state.copy(error = message)
+        _state = _state.copy(error = message, isSyncing = false)
     }
 }

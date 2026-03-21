@@ -173,7 +173,12 @@ private fun MetricsView(
                     fontWeight = FontWeight.Bold),
                 modifier = GlanceModifier.defaultWeight()
             )
-            if (!isTiny) {
+            if (WidgetStateHolder.state.isSyncing) {
+                Text(
+                    "Syncing...",
+                    style = TextStyle(color = ColorProvider(BlueAccent), fontSize = 10.sp)
+                )
+            } else if (!isTiny) {
                 Text(
                     updatedAgo(WidgetStateHolder.state.lastUpdated),
                     style = TextStyle(color = ColorProvider(TextMuted), fontSize = 10.sp)
@@ -287,12 +292,14 @@ private fun StatCard(label: String, value: String, modifier: GlanceModifier = Gl
 private fun GaugeCell(context: Context, pct: Float, label: String, modifier: GlanceModifier = GlanceModifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         val drawable = makeGaugeBitmap(pct, context)
-        Image(
-            provider = ImageProvider(drawable.bitmap),
-            contentDescription = "$label $pct%",
-            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-            contentScale = ContentScale.Fit
-        )
+        Box(modifier = GlanceModifier.fillMaxWidth().height(70.dp), contentAlignment = Alignment.Center) {
+            Image(
+                provider = ImageProvider(drawable.bitmap),
+                contentDescription = "$label $pct%",
+                modifier = GlanceModifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
+        }
         Spacer(GlanceModifier.height(4.dp))
         Text(
             label,
