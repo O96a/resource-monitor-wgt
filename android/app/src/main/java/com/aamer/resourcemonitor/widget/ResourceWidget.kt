@@ -34,14 +34,13 @@ private val TextMuted   = Color(0xFF5A7090)
 private val BlueAccent  = Color(0xFF4A9EFF)
 
 // ── Arc gauge bitmap factory ──────────────────────────────────────
-// Generates a high-res bitmap to be scaled smoothly by ContentScale.Fit
 fun makeGaugeBitmap(pct: Float, context: Context): BitmapDrawable {
-    val size = 400 // High-res fixed size
+    val size = 400
     val bmp    = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
     val cx     = size / 2f
     val cy     = size / 2f
-    val strokeWidth = size * 0.12f
+    val strokeWidth = size * 0.14f
     val r      = size / 2f - strokeWidth
     val oval   = RectF(cx - r, cy - r, cx + r, cy + r)
 
@@ -57,40 +56,33 @@ fun makeGaugeBitmap(pct: Float, context: Context): BitmapDrawable {
         style = Paint.Style.STROKE
         this.strokeWidth = strokeWidth
         strokeCap = Paint.Cap.ROUND
-        color = android.graphics.Color.argb(
-            255,
-            (arcColor.red * 255).toInt(),
-            (arcColor.green * 255).toInt(),
-            (arcColor.blue * 255).toInt()
-        )
+        color = android.graphics.Color.argb(255, (arcColor.red * 255).toInt(), (arcColor.green * 255).toInt(), (arcColor.blue * 255).toInt())
     }
-    val sweep = (pct / 100f) * 260f
-    canvas.drawArc(oval, -220f, sweep, false, arc)
+    canvas.drawArc(oval, -220f, (pct / 100f) * 260f, false, arc)
 
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = size * 0.25f
+        textSize = size * 0.28f
         textAlign = Paint.Align.CENTER
         color = android.graphics.Color.parseColor("#D0DCFF")
         typeface = Typeface.DEFAULT_BOLD
     }
-    val textY = cy - (textPaint.descent() + textPaint.ascent()) / 2
-    canvas.drawText("${pct.toInt()}%", cx, textY, textPaint)
+    canvas.drawText("${pct.toInt()}%", cx, cy - (textPaint.descent() + textPaint.ascent()) / 2, textPaint)
 
     return BitmapDrawable(context.resources, bmp)
 }
 
-// ── Main widget composable ────────────────────────────────────────
+// ── Main widget ───────────────────────────────────────────────────
 
 class ResourceWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Responsive(
         setOf(
-            DpSize(100.dp, 50.dp),    // 1x1
-            DpSize(180.dp, 100.dp),   // 2x1
-            DpSize(250.dp, 100.dp),   // 3x1
-            DpSize(300.dp, 180.dp),   // 4x2
-            DpSize(400.dp, 250.dp),   // 5x3
-            DpSize(400.dp, 400.dp),   // 5x5+
+            DpSize(100.dp, 50.dp),
+            DpSize(180.dp, 100.dp),
+            DpSize(250.dp, 100.dp),
+            DpSize(300.dp, 180.dp),
+            DpSize(400.dp, 250.dp),
+            DpSize(400.dp, 400.dp),
         )
     )
 
@@ -100,33 +92,19 @@ class ResourceWidget : GlanceAppWidget() {
 
     @Composable
     private fun Content() {
+        val state = WidgetStateHolder.state
+        val size  = LocalSize.current
         val context = LocalContext.current
-        val state   = WidgetStateHolder.state
-        val size    = LocalSize.current
-
-        val isSmall = size.height < 120.dp
-        val isWide  = size.width >= 250.dp
-        val isFull  = size.height >= 240.dp
 
         GlanceTheme {
             Box(
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .background(ColorProvider(BgDark))
-                    .cornerRadius(12.dp)
-                    .padding(4.dp)
+                modifier = GlanceModifier.fillMaxSize()
+                    .background(ColorProvider(BgDark)).cornerRadius(12.dp).padding(4.dp)
             ) {
                 when {
                     state.error != null -> ErrorView(state.error)
                     state.snapshot == null -> LoadingView()
-                    else -> MetricsView(
-                        snapshot = state.snapshot,
-                        context  = context,
-                        size     = size,
-                        isSmall  = isSmall,
-                        isWide   = isWide,
-                        isFull   = isFull
-                    )
+                    else -> MetricsView(state.snapshot, context, size)
                 }
             }
         }
@@ -134,196 +112,114 @@ class ResourceWidget : GlanceAppWidget() {
 }
 
 @Composable
-private fun MetricsView(
-    snapshot: MetricsSnapshot,
-    context: Context,
-    size: DpSize,
-    isSmall: Boolean,
-    isWide: Boolean,
-    isFull: Boolean
-) {
-    val os     = snapshot.os
+private fun LoadingView() {
+    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("Loading...", style = TextStyle(color = ColorProvider(TextMuted), fontSize = 12.sp))
+    }
+}
+
+@Composable
+private fun ErrorView(msg: String) {
+    Column(modifier = GlanceModifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
+        Text("Offline", style = TextStyle(color = ColorProvider(Color(0xFFE24B4A)), fontSize = 12.sp, fontWeight = FontWeight.Bold))
+        Text(msg.take(40), style = TextStyle(color = ColorProvider(TextMuted), fontSize = 10.sp), maxLines = 1)
+        Button("Retry", actionRunCallback<RefreshAction>())
+    }
+}
+
+@Composable
+private fun MetricsView(snapshot: MetricsSnapshot, context: Context, size: DpSize) {
+    val os = snapshot.os
     val oracle = snapshot.oracle
+    val isTall = size.height >= 150.dp
+    val isWide = size.width >= 240.dp
 
-    Column(modifier = GlanceModifier.fillMaxSize().padding(4.dp)) {
-        // ── Header (Server Name + Sync status + Refresh) ──────
-        Row(
-            modifier = GlanceModifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    Column(modifier = GlanceModifier.fillMaxSize()) {
+        // Header
+        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = GlanceModifier.defaultWeight()) {
-                Text(
-                    snapshot.serverName,
-                    style = TextStyle(color = ColorProvider(TextPrimary), 
-                        fontSize = 12.sp, fontWeight = FontWeight.Bold),
-                    maxLines = 1
-                )
-                if (WidgetStateHolder.state.isSyncing) {
-                    Text("Syncing...", style = TextStyle(color = ColorProvider(BlueAccent), fontSize = 9.sp))
-                } else {
-                    Text(updatedAgo(WidgetStateHolder.state.lastUpdated), 
-                        style = TextStyle(color = ColorProvider(TextMuted), fontSize = 9.sp))
-                }
+                Text(snapshot.serverName, style = TextStyle(color = ColorProvider(TextPrimary), fontSize = 11.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                Text(if (WidgetStateHolder.state.isSyncing) "Syncing..." else updatedAgo(WidgetStateHolder.state.lastUpdated), 
+                    style = TextStyle(color = ColorProvider(if (WidgetStateHolder.state.isSyncing) BlueAccent else TextMuted), fontSize = 8.sp))
             }
-            
-            // Larger touch target for refresh
-            Box(
-                modifier = GlanceModifier.size(32.dp).clickable(actionRunCallback<RefreshAction>()),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    provider = ImageProvider(android.R.drawable.ic_popup_sync),
-                    contentDescription = "Refresh",
-                    modifier = GlanceModifier.size(20.dp)
-                )
-            }
+            Image(provider = ImageProvider(android.R.drawable.ic_popup_sync), contentDescription = "Refresh",
+                modifier = GlanceModifier.size(24.dp).clickable(actionRunCallback<RefreshAction>()))
         }
 
-        Spacer(GlanceModifier.height(4.dp))
+        Spacer(GlanceModifier.height(2.dp))
 
-        // ── Gauges Section ────────────────────────────────────
-        Row(
-            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val gaugeHeight = if (isSmall) 50.dp else 85.dp
-            
-            GaugeCell(context, os.cpuPercent, "CPU", gaugeHeight, GlanceModifier.defaultWeight())
-            GaugeCell(context, os.ramPercent, "RAM", gaugeHeight, GlanceModifier.defaultWeight())
-            GaugeCell(context, os.diskPercent, "DSK", gaugeHeight, GlanceModifier.defaultWeight())
-            
+        // Gauges
+        Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
+            val gHeight = if (size.height < 100.dp) 45.dp else 90.dp
+            GaugeCell(context, os.cpuPercent, "CPU", gHeight, GlanceModifier.defaultWeight())
+            GaugeCell(context, os.ramPercent, "RAM", gHeight, GlanceModifier.defaultWeight())
+            GaugeCell(context, os.diskPercent, "DISK", gHeight, GlanceModifier.defaultWeight())
             if (oracle != null && isWide) {
-                GaugeCell(context, oracle.sessionPercent, "DB", gaugeHeight, GlanceModifier.defaultWeight())
+                GaugeCell(context, oracle.sessionPercent, "DB", gHeight, GlanceModifier.defaultWeight())
             }
         }
 
-        // ── Metrics Grid ──────────────────────────────────────
-        if (!isSmall) {
-            Spacer(GlanceModifier.height(6.dp))
-            
-            // Row 1: Net & Load
+        // Metrics Grid
+        if (size.height > 90.dp) {
+            Spacer(GlanceModifier.height(4.dp))
             Row(modifier = GlanceModifier.fillMaxWidth()) {
-                StatCard("↑ ${os.netSentMb.toInt()}M", "NET", GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.width(4.dp))
-                StatCard("↓ ${os.netRecvMb.toInt()}M", "NET", GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.width(4.dp))
+                StatCard("↑${os.netSentMb.toInt()}M", "NET", GlanceModifier.defaultWeight())
+                StatCard("↓${os.netRecvMb.toInt()}M", "NET", GlanceModifier.defaultWeight())
                 StatCard("${os.loadAvg1m}", "LOAD", GlanceModifier.defaultWeight())
             }
-
-            if (isFull) {
-                Spacer(GlanceModifier.height(4.dp))
-                // Row 2: Capacity details
+            
+            if (isTall) {
+                Spacer(GlanceModifier.height(2.dp))
                 Row(modifier = GlanceModifier.fillMaxWidth()) {
-                    StatCard("${os.ramUsedGb.toInt()}/${os.ramTotalGb.toInt()}G", "RAM", GlanceModifier.defaultWeight())
-                    Spacer(GlanceModifier.width(4.dp))
-                    StatCard("${os.diskUsedGb.toInt()}/${os.diskTotalGb.toInt()}G", "DISK", GlanceModifier.defaultWeight())
-                    Spacer(GlanceModifier.width(4.dp))
-                    StatCard("${os.cpuCoreCount}", "CORES", GlanceModifier.defaultWeight())
+                    StatCard("${os.ramUsedGb.toInt()}G", "USED", GlanceModifier.defaultWeight())
+                    StatCard("${os.ramTotalGb.toInt()}G", "TOTAL", GlanceModifier.defaultWeight())
+                    StatCard("${os.cpuCoreCount}", "CORE", GlanceModifier.defaultWeight())
                 }
-                
                 if (oracle != null) {
-                    Spacer(GlanceModifier.height(4.dp))
-                    // Row 3: Oracle details
+                    Spacer(GlanceModifier.height(2.dp))
                     Row(modifier = GlanceModifier.fillMaxWidth()) {
                         StatCard("${oracle.tablespacePercent.toInt()}%", "TBSP", GlanceModifier.defaultWeight())
-                        Spacer(GlanceModifier.width(4.dp))
-                        StatCard(oracle.dbStatus, "STATUS", GlanceModifier.defaultWeight())
-                        Spacer(GlanceModifier.width(4.dp))
-                        StatCard("${oracle.activeSessions}/${oracle.maxSessions}", "SESS", GlanceModifier.defaultWeight())
+                        StatCard(oracle.dbStatus, "DB", GlanceModifier.defaultWeight())
+                        StatCard("${oracle.activeSessions}", "SESS", GlanceModifier.defaultWeight())
                     }
                 }
             }
         }
-
-        // ── Alarms ────────────────────────────────────────────
-        val activeAlarms = buildList {
-            if (os.cpuPercent >= 85f) add("CPU")
-            if (os.ramPercent >= 90f) add("RAM")
-            if (os.diskPercent >= 80f) add("DSK")
-            oracle?.let { if (it.tablespacePercent >= 85f) add("DB") }
-        }
-        
-        if (activeAlarms.isNotEmpty()) {
-            Spacer(GlanceModifier.height(4.dp))
-            Box(
-                modifier = GlanceModifier.fillMaxWidth().background(ColorProvider(Color(0x66E24B4A))).cornerRadius(4.dp).padding(2.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("⚠ ${activeAlarms.joinToString(", ")}", 
-                    style = TextStyle(color = ColorProvider(Color.White), fontSize = 9.sp, fontWeight = FontWeight.Bold))
-            }
-        }
     }
 }
 
 @Composable
-private fun StatCard(value: String, label: String, modifier: GlanceModifier = GlanceModifier) {
-    Column(
-        modifier = modifier.background(ColorProvider(CardDark)).cornerRadius(4.dp).padding(vertical = 4.dp, horizontal = 2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(value, style = TextStyle(color = ColorProvider(TextPrimary), fontSize = 10.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-        Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 7.sp), maxLines = 1)
-    }
-}
-
-@Composable
-private fun GaugeCell(context: Context, pct: Float, label: String, height: androidx.compose.ui.unit.Dp, modifier: GlanceModifier = GlanceModifier) {
+private fun GaugeCell(context: Context, pct: Float, label: String, height: androidx.compose.ui.unit.Dp, modifier: GlanceModifier) {
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = GlanceModifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
-            Image(
-                provider = ImageProvider(makeGaugeBitmap(pct, context).bitmap),
-                contentDescription = "$label $pct%",
-                modifier = GlanceModifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
-        }
+        Image(provider = ImageProvider(makeGaugeBitmap(pct, context).bitmap), contentDescription = label,
+            modifier = GlanceModifier.fillMaxWidth().height(height), contentScale = ContentScale.Fit)
         Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 8.sp, fontWeight = FontWeight.Bold))
     }
 }
 
-private fun updatedAgo(lastUpdated: java.time.Instant?): String {
-    lastUpdated ?: return "Never"
-    val sec = java.time.Instant.now().epochSecond - lastUpdated.epochSecond
-    return when {
-        sec < 60  -> "${sec}s ago"
-        sec < 3600 -> "${sec / 60}m ago"
-        else       -> "${sec / 3600}h ago"
+@Composable
+private fun StatCard(value: String, label: String, modifier: GlanceModifier) {
+    Column(modifier = modifier.padding(1.dp).background(ColorProvider(CardDark)).cornerRadius(4.dp).padding(2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = TextStyle(color = ColorProvider(TextPrimary), fontSize = 9.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 7.sp), maxLines = 1)
     }
 }
 
-// ── Widget receiver & action ──────────────────────────────────────
+private fun updatedAgo(last: java.time.Instant?): String {
+    val sec = java.time.Instant.now().epochSecond - (last?.epochSecond ?: 0)
+    return if (last == null) "Never" else if (sec < 60) "${sec}s" else "${sec/60}m"
+}
 
 class ResourceWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget = ResourceWidget()
-
-    override fun onEnabled(context: Context) {
-        super.onEnabled(context)
-        MetricsFetchWorker.schedule(context)
-        MetricsFetchWorker.fetchNow(context)
-    }
-
-    override fun onUpdate(
-        context: Context,
-        appWidgetManager: android.appwidget.AppWidgetManager,
-        appWidgetIds: IntArray
-    ) {
-        super.onUpdate(context, appWidgetManager, appWidgetIds)
-        MetricsFetchWorker.fetchNow(context)
-    }
-
-    override fun onDisabled(context: Context) {
-        super.onDisabled(context)
-        MetricsFetchWorker.cancel(context)
-    }
+    override fun onEnabled(context: Context) { super.onEnabled(context); MetricsFetchWorker.schedule(context); MetricsFetchWorker.fetchNow(context) }
+    override fun onUpdate(c: Context, m: android.appwidget.AppWidgetManager, ids: IntArray) { super.onUpdate(c, m, ids); MetricsFetchWorker.fetchNow(c) }
+    override fun onDisabled(context: Context) { super.onDisabled(context); MetricsFetchWorker.cancel(context) }
 }
 
 class RefreshAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        // Trigger the background fetch
         MetricsFetchWorker.fetchNow(context)
-        
-        // Immediately update the UI to show the 'Syncing...' state
         ResourceWidget().update(context, glanceId)
     }
 }
