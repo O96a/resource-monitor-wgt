@@ -14,8 +14,8 @@ android {
         applicationId  = "com.aamer.resourcemonitor"
         minSdk         = 26
         targetSdk      = 34
-        versionCode    = 2
-        versionName    = "1.1.0"
+        versionCode    = 3
+        versionName    = "1.1.1"
 
         // Default server connection — change these to match your Oracle server
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"http://129.151.131.39/resource-monitor\"")

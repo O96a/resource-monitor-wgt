@@ -1,7 +1,9 @@
 # Resource Monitor
 
 > Android homescreen widget + FastAPI backend for real-time Oracle server resource monitoring.
-> Arc gauges · Sparklines · Oracle-specific metrics · Push alarm notifications
+> Arc gauges · Live sparklines · High-density metrics · Push alarm notifications
+
+**Version: 1.1.1**
 
 ---
 
@@ -12,22 +14,19 @@ resource-monitor/
 ├── server/                          # FastAPI backend (runs on Oracle server)
 │   ├── main.py                      # App entry point, scheduler, auth
 │   ├── config.py                    # Pydantic settings (reads .env)
-│   ├── state.py                     # In-memory latest snapshot
+│   ├── state.py                     # In-memory latest snapshot (stateless)
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   ├── resource-monitor.service     # systemd unit
 │   ├── .env.example                 # Copy → .env and fill in
-│   ├── db/
-│   │   └── store.py                 # SQLite — history + alarms CRUD
 │   ├── metrics/
 │   │   ├── os_collector.py          # psutil: CPU / RAM / disk / net / load
 │   │   └── oracle_collector.py      # oracledb: sessions / tablespace / redo
 │   ├── routers/
 │   │   ├── metrics.py               # GET /metrics
-│   │   ├── history.py               # GET /history
 │   │   └── alarms.py                # GET /alarms  POST /alarms/{id}/acknowledge
 │   └── services/
-│       ├── alarm_engine.py          # Threshold evaluation + alarm persistence
+│       ├── alarm_engine.py          # Threshold evaluation + push notifications
 │       └── push.py                  # FCM push notification sender
 │
 └── android/                         # Kotlin + Jetpack Glance widget app
@@ -41,7 +40,9 @@ resource-monitor/
         └── src/main/
             ├── AndroidManifest.xml
             ├── java/com/aamer/resourcemonitor/
-            │   ├── ResourceMonitorApp.kt
+            │   ├── ResourceMonitorApp.kt        # @HiltAndroidApp entry
+            │   ├── di/
+            │   │   └── DiModule.kt              # Hilt dependency injection
             │   ├── data/
             │   │   ├── api/
             │   │   │   ├── ResourceMonitorApi.kt   # Retrofit interface
@@ -141,15 +142,8 @@ X-API-Key: <your API_KEY from .env>
 |--------|------|-------------|
 | GET | `/health` | Health check — no auth |
 | GET | `/metrics` | Current snapshot (OS + Oracle) |
-| GET | `/history?metric=os.cpu_percent&window=30m` | Time-series history |
 | GET | `/alarms` | Active (unacknowledged) alarms |
 | POST | `/alarms/{id}/acknowledge` | Dismiss an alarm |
-
-**Available history metrics:**
-`os.cpu_percent` · `os.ram_percent` · `os.disk_percent` · `os.load_avg_1m` ·
-`oracle.session_percent` · `oracle.tablespace_percent` · `oracle.redo_switches_per_hour` · `oracle.slow_queries_count`
-
-**Available history windows:** `30m` · `1h` · `6h` · `24h` · `48h`
 
 **Swagger UI:** `http://your-server:8080/docs`
 
@@ -311,10 +305,10 @@ The current Android app supports one server. Multi-server support requires:
 | OS metrics | psutil |
 | Oracle metrics | python-oracledb (thin mode) |
 | Scheduling | APScheduler |
-| Persistence | SQLite via aiosqlite |
 | Push | Firebase Cloud Messaging (optional) |
 | Android UI | Jetpack Compose + Material3 |
 | Widget | Jetpack Glance |
+| DI | Hilt |
 | Background work | WorkManager |
 | HTTP client | Retrofit2 + OkHttp3 |
 | JSON | Moshi |
@@ -331,7 +325,24 @@ The current Android app supports one server. Multi-server support requires:
 | `ORA-01031: insufficient privileges` | Run the SQL grants block above |
 | Widget never updates | WorkManager min interval is 15 min on stock Android; use "Refresh" tap for immediate fetch |
 | Push notifications not arriving | Check `FCM_SERVER_KEY` and `FCM_DEVICE_TOKEN` in `.env`; verify Firebase project is linked |
-| `aiosqlite` errors on first run | Delete `metrics.db` and restart — schema will be recreated |
+| App crashes on launch | Ensure Hilt dependencies are correctly configured; check `ResourceMonitorApp.kt` has `@HiltAndroidApp` |
+
+---
+
+## Changelog
+
+### v1.1.1
+- Fixed graphic paint constant casing
+- Fixed color reference in gauge bitmap factory
+
+### v1.1.0
+- **Radical UI overhaul**: 2x larger gauges, ultra-dense info layout
+- **High-density metrics**: Network MB/s, CPU cores, RAM/Disk GB, Load avg, Oracle Tablespace/Status/Sessions
+- **Live sparkline**: Real-time CPU trend chart in widget
+- **Hilt DI**: Complete dependency injection refactor
+- **Stateless server**: Removed database dependency for simpler deployment
+- **Instant refresh**: "Syncing..." feedback, 15-min auto-refresh fallback
+- **Responsive tiers**: 6 specialized layouts for different widget sizes
 
 ---
 
