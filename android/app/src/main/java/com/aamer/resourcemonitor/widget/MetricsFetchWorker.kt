@@ -2,63 +2,54 @@ package com.aamer.resourcemonitor.widget
 
 import android.content.Context
 import androidx.glance.appwidget.updateAll
+import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import com.aamer.resourcemonitor.data.repository.MetricsRepository
 import com.aamer.resourcemonitor.data.repository.SettingsRepository
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
-import java.util.concurrent.TimeUnit
 
-class MetricsFetchWorker(
-    appContext: Context,
-    workerParams: WorkerParameters
+@HiltWorker
+class MetricsFetchWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val settingsRepository: SettingsRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val settings = SettingsRepository(applicationContext)
-        val config = settings.configFlow.first()
+        val config = settingsRepository.configFlow.first()
 
         if (config.baseUrl.isBlank() || config.apiKey.isBlank()) {
+            WidgetStateHolder.setError("Server not configured")
+            ResourceWidget().updateAll(applicationContext)
             return Result.failure()
         }
 
         return try {
             val repo     = MetricsRepository.create(config.baseUrl, config.apiKey)
             val snapshot = repo.getSnapshot().getOrThrow()
-
-            // Store the latest snapshot in WidgetStateHolder for Glance to read
-            WidgetStateHolder.update(snapshot)
+            
+            // Store the latest snapshot in WidgetStateHolder for Glance to read (empty history)
+            WidgetStateHolder.update(snapshot, emptyList())
 
             // Trigger Glance widget re-render
             ResourceWidget().updateAll(applicationContext)
 
             Result.success()
         } catch (e: Exception) {
-            if (runAttemptCount < 3) Result.retry() else Result.failure()
+            if (runAttemptCount < 3) {
+                Result.retry()
+            } else {
+                WidgetStateHolder.setError(e.message ?: "Connection failed")
+                ResourceWidget().updateAll(applicationContext)
+                Result.failure()
+            }
         }
     }
 
     companion object {
-        private const val WORK_NAME = "resource_monitor_periodic"
-
-        fun schedule(context: Context, intervalMinutes: Long = 15L) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            val request = PeriodicWorkRequestBuilder<MetricsFetchWorker>(
-                repeatInterval = intervalMinutes,
-                repeatIntervalTimeUnit = TimeUnit.MINUTES
-            )
-                .setConstraints(constraints)
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-                .build()
-
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.UPDATE,
-                request
-            )
-        }
+        private const val WORK_NAME = "resource_monitor_fetch"
 
         fun fetchNow(context: Context) {
             val request = OneTimeWorkRequestBuilder<MetricsFetchWorker>()
@@ -68,11 +59,7 @@ class MetricsFetchWorker(
                         .build()
                 )
                 .build()
-            WorkManager.getInstance(context).enqueue(request)
-        }
-
-        fun cancel(context: Context) {
-            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+            WorkManager.getInstance(context).enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.REPLACE, request)
         }
     }
 }

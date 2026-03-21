@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.aamer.resourcemonitor.ui.MainActivity
+import com.aamer.resourcemonitor.widget.MetricsFetchWorker
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
@@ -32,6 +33,9 @@ class ResourceFcmService : FirebaseMessagingService() {
             ?: "A resource threshold has been breached."
 
         showNotification(title, body)
+        
+        // Instantly trigger a fetch to update the widget
+        MetricsFetchWorker.fetchNow(this)
     }
 
     override fun onNewToken(token: String) {

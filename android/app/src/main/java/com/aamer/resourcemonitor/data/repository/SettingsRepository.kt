@@ -19,7 +19,7 @@ data class ServerConfig(
     val serverName: String = "My Oracle Server"
 )
 
-class SettingsRepository(private val context: Context) {
+class SettingsRepository @javax.inject.Inject constructor(@dagger.hilt.android.qualifiers.ApplicationContext private val context: Context) {
 
     companion object {
         private val KEY_BASE_URL    = stringPreferencesKey("base_url")

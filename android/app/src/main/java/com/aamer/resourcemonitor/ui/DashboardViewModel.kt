@@ -1,28 +1,28 @@
 package com.aamer.resourcemonitor.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aamer.resourcemonitor.data.models.Alarm
-import com.aamer.resourcemonitor.data.models.HistoryPoint
 import com.aamer.resourcemonitor.data.models.MetricsSnapshot
 import com.aamer.resourcemonitor.data.repository.MetricsRepository
 import com.aamer.resourcemonitor.data.repository.SettingsRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class DashboardUiState(
     val snapshot: MetricsSnapshot? = null,
-    val cpuHistory: List<HistoryPoint> = emptyList(),
     val alarms: List<Alarm> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val isConfigured: Boolean = false,
 )
 
-class DashboardViewModel(app: Application) : AndroidViewModel(app) {
-
-    private val settingsRepo = SettingsRepository(app)
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
+    private val settingsRepo: SettingsRepository
+) : ViewModel() {
 
     val configFlow = settingsRepo.configFlow
 
@@ -57,10 +57,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(snapshot = snap) }
         }.onFailure { e ->
             _state.update { it.copy(error = e.message ?: "Connection failed") }
-        }
-
-        repo.getHistory("os.cpu_percent", "30m").onSuccess { hist ->
-            _state.update { it.copy(cpuHistory = hist.data) }
         }
 
         repo.getAlarms().onSuccess { alarms ->

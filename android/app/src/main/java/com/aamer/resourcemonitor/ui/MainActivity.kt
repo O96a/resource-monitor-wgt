@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aamer.resourcemonitor.data.models.*
 import com.aamer.resourcemonitor.data.repository.ServerConfig
 import com.aamer.resourcemonitor.data.repository.SettingsRepository
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 // ── Theme ─────────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ fun pctColor(pct: Float) = when {
 
 // ── Activity ──────────────────────────────────────────────────────
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         try { installSplashScreen() } catch (_: Exception) { /* Samsung One UI workaround */ }
@@ -198,16 +200,6 @@ fun DashboardScreen(state: DashboardUiState, onRefresh: () -> Unit) {
                 }
             }
 
-            // Sparkline
-            if (state.cpuHistory.isNotEmpty()) {
-                item {
-                    Spacer(Modifier.height(4.dp))
-                    SectionLabel("CPU — Last 30 min")
-                    Spacer(Modifier.height(8.dp))
-                    SparklineCard(state.cpuHistory.map { it.value }, BlueAccent)
-                }
-            }
-
             // Oracle section
             snap.oracle?.let { oracle ->
                 item {
@@ -297,39 +289,6 @@ fun ArcGauge(pct: Float, color: Color, size: Dp) {
             fontSize   = 14.sp,
             fontWeight = FontWeight.Bold
         )
-    }
-}
-
-@Composable
-fun SparklineCard(points: List<Float>, color: Color) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = CardColor),
-        shape  = RoundedCornerShape(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("${points.lastOrNull()?.toInt() ?: 0}%",
-                    color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text("peak ${points.maxOrNull()?.toInt() ?: 0}%",
-                    color = MutedText, fontSize = 12.sp)
-            }
-            Spacer(Modifier.height(8.dp))
-            Canvas(modifier = Modifier.fillMaxWidth().height(60.dp)) {
-                if (points.size < 2) return@Canvas
-                val min = points.min()
-                val max = points.max().let { if (it == min) min + 1f else it }
-                val path = Path()
-                points.forEachIndexed { i, v ->
-                    val x = i / (points.size - 1f) * size.width
-                    val y = size.height - ((v - min) / (max - min)) * size.height * 0.85f - size.height * 0.075f
-                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                }
-                drawPath(path, color, style = Stroke(3f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-            }
-        }
     }
 }
 

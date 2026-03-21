@@ -8,11 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader
 
 from config import settings
-from db.store import init_db, insert_metrics
 from metrics.oracle_collector import collect_oracle_metrics
 from metrics.os_collector import collect_os_metrics
 from routers.alarms import router as alarms_router
-from routers.history import router as history_router
 from routers.metrics import router as metrics_router
 from services.alarm_engine import check_alarms
 from state import state
@@ -27,7 +25,7 @@ logger = logging.getLogger(__name__)
 # ── Collection cycle ──────────────────────────────────────────────
 
 async def collect_cycle() -> None:
-    """Collect OS + Oracle metrics, persist history, evaluate alarms."""
+    """Collect OS + Oracle metrics, evaluate alarms."""
     try:
         os_data = collect_os_metrics()
         oracle_data = None
@@ -43,14 +41,6 @@ async def collect_cycle() -> None:
             "oracle": oracle_data,
         }
         state.latest_snapshot = snapshot
-
-        # Flatten numerics for SQLite history
-        flat: dict = {f"os.{k}": v for k, v in os_data.items() if isinstance(v, (int, float))}
-        if oracle_data:
-            flat.update(
-                {f"oracle.{k}": v for k, v in oracle_data.items() if isinstance(v, (int, float))}
-            )
-        await insert_metrics(flat)
 
         # Alarm evaluation — pass nested structure so dot-path resolution works
         alarm_ctx = {**os_data, "oracle": oracle_data or {}}
@@ -68,7 +58,6 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    await init_db()
     await collect_cycle()                                      # immediate first run
     scheduler.add_job(
         collect_cycle,
@@ -113,7 +102,6 @@ async def require_api_key(api_key: str = Security(_api_key_header)) -> str:
 _auth = [Depends(require_api_key)]
 
 app.include_router(metrics_router, prefix="/metrics", tags=["metrics"],  dependencies=_auth)
-app.include_router(history_router, prefix="/history", tags=["history"],  dependencies=_auth)
 app.include_router(alarms_router,  prefix="/alarms",  tags=["alarms"],   dependencies=_auth)
 
 

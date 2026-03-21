@@ -29,9 +29,7 @@ class Settings(BaseSettings):
     fcm_device_token: str = ""
 
     # Storage
-    metrics_db_path: str = "./metrics.db"
-    history_retention_hours: int = 48
-    collection_interval_seconds: int = 30
+    collection_interval_seconds: int = 3
 
 
 settings = Settings()

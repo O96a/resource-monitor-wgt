@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Dict, Any
 
 from config import settings
-from db.store import upsert_alarm, clear_alarm
 from services.push import send_push_notification
 
 logger = logging.getLogger(__name__)
@@ -17,6 +16,8 @@ ALARM_RULES = [
     ("oracle.tablespace_percent","TABLESPACE", lambda: settings.alarm_tablespace_threshold, "critical"),
 ]
 
+# In-memory store for active alarms
+ACTIVE_ALARMS: Dict[str, Dict[str, Any]] = {}
 
 def _resolve(path: str, data: Dict[str, Any]):
     """Walk a dot-separated path into a nested dict."""
@@ -26,7 +27,6 @@ def _resolve(path: str, data: Dict[str, Any]):
             return None
         value = value.get(key)
     return value
-
 
 async def check_alarms(metrics: Dict[str, Any]) -> None:
     for metric_path, label, threshold_fn, severity in ALARM_RULES:
@@ -38,6 +38,9 @@ async def check_alarms(metrics: Dict[str, Any]) -> None:
         alarm_id = f"{label.lower()}_high"
 
         if value >= threshold:
+            # Alarm Condition
+            is_new = alarm_id not in ACTIVE_ALARMS
+            
             alarm = {
                 "id": alarm_id,
                 "metric": metric_path,
@@ -45,15 +48,25 @@ async def check_alarms(metrics: Dict[str, Any]) -> None:
                 "threshold": threshold,
                 "severity": severity,
                 "message": f"{label} at {value:.0f}% — threshold {threshold:.0f}% breached",
-                "triggered_at": datetime.utcnow().isoformat(),
+                "triggered_at": ACTIVE_ALARMS.get(alarm_id, {}).get("triggered_at", datetime.utcnow().isoformat()),
             }
-            await upsert_alarm(alarm)
-            logger.warning("ALARM: %s", alarm["message"])
+            
+            ACTIVE_ALARMS[alarm_id] = alarm
 
-            if settings.fcm_enabled:
-                await send_push_notification(
-                    title=f"{'⚠' if severity == 'warning' else '🔴'} Resource Alarm — {label}",
-                    body=alarm["message"],
-                )
+            if is_new:
+                logger.warning("ALARM TRIGGERED: %s", alarm["message"])
+                if settings.fcm_enabled:
+                    await send_push_notification(
+                        title=f"{'⚠' if severity == 'warning' else '🔴'} Resource Alarm — {label}",
+                        body=alarm["message"],
+                    )
         else:
-            await clear_alarm(alarm_id)
+            # Normal Condition
+            if alarm_id in ACTIVE_ALARMS:
+                del ACTIVE_ALARMS[alarm_id]
+                logger.info("ALARM RESOLVED: %s", label)
+                if settings.fcm_enabled:
+                    await send_push_notification(
+                        title=f"✅ Alarm Resolved — {label}",
+                        body=f"{label} has returned to normal ({value:.0f}%)",
+                    )

@@ -18,7 +18,6 @@ import androidx.glance.layout.*
 import androidx.glance.text.*
 import androidx.glance.unit.ColorProvider
 import com.aamer.resourcemonitor.data.models.MetricsSnapshot
-import kotlin.math.min
 
 // ── Colour helpers ────────────────────────────────────────────────
 
@@ -34,18 +33,20 @@ private val TextPrimary = Color(0xFFD0DCFF)
 private val TextMuted   = Color(0xFF5A7090)
 
 // ── Arc gauge bitmap factory ──────────────────────────────────────
-
-fun makeGaugeBitmap(pct: Float, size: Int, context: Context): BitmapDrawable {
+// Generates a high-res bitmap to be scaled smoothly by ContentScale.Fit
+fun makeGaugeBitmap(pct: Float, context: Context): BitmapDrawable {
+    val size = 400 // High-res fixed size
     val bmp    = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
     val cx     = size / 2f
     val cy     = size / 2f
-    val r      = size / 2f - 6f
+    val strokeWidth = size * 0.12f
+    val r      = size / 2f - strokeWidth
     val oval   = RectF(cx - r, cy - r, cx + r, cy + r)
 
     val track = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 7f
+        this.strokeWidth = strokeWidth
         color = android.graphics.Color.parseColor("#2A3050")
     }
     canvas.drawArc(oval, -220f, 260f, false, track)
@@ -53,7 +54,7 @@ fun makeGaugeBitmap(pct: Float, size: Int, context: Context): BitmapDrawable {
     val arcColor = percentColor(pct)
     val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 7f
+        this.strokeWidth = strokeWidth
         strokeCap = Paint.Cap.ROUND
         color = android.graphics.Color.argb(
             255,
@@ -66,7 +67,7 @@ fun makeGaugeBitmap(pct: Float, size: Int, context: Context): BitmapDrawable {
     canvas.drawArc(oval, -220f, sweep, false, arc)
 
     val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = size * 0.20f
+        textSize = size * 0.25f
         textAlign = Paint.Align.CENTER
         color = android.graphics.Color.parseColor("#D0DCFF")
         typeface = Typeface.DEFAULT_BOLD
@@ -77,49 +78,16 @@ fun makeGaugeBitmap(pct: Float, size: Int, context: Context): BitmapDrawable {
     return BitmapDrawable(context.resources, bmp)
 }
 
-fun makeSparklineBitmap(points: List<Float>, w: Int, h: Int,
-                         color: Color, context: Context): BitmapDrawable {
-    val bmp    = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bmp)
-
-    if (points.size < 2) return BitmapDrawable(context.resources, bmp)
-
-    val min = points.min()
-    val max = points.max().let { if (it == min) min + 1f else it }
-
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style      = Paint.Style.STROKE
-        strokeWidth = 2f
-        strokeCap  = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-        this.color  = android.graphics.Color.argb(
-            200,
-            (color.red * 255).toInt(),
-            (color.green * 255).toInt(),
-            (color.blue * 255).toInt()
-        )
-    }
-
-    val path = Path()
-    points.forEachIndexed { i, v ->
-        val x = i / (points.size - 1f) * w
-        val y = h - ((v - min) / (max - min)) * h * 0.85f - h * 0.075f
-        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-    }
-    canvas.drawPath(path, paint)
-
-    return BitmapDrawable(context.resources, bmp)
-}
-
 // ── Main widget composable ────────────────────────────────────────
 
 class ResourceWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Responsive(
         setOf(
-            DpSize(180.dp, 110.dp),   // small
-            DpSize(320.dp, 140.dp),   // medium
-            DpSize(400.dp, 220.dp),   // large
+            DpSize(150.dp, 80.dp),    // Tiny
+            DpSize(220.dp, 110.dp),   // Small
+            DpSize(300.dp, 180.dp),   // Medium
+            DpSize(400.dp, 260.dp),   // Large
         )
     )
 
@@ -133,15 +101,17 @@ class ResourceWidget : GlanceAppWidget() {
         val state   = WidgetStateHolder.state
         val size    = LocalSize.current
 
-        val isLarge  = size.width >= 380.dp
-        val isMedium = size.width >= 300.dp
+        val isTiny    = size.width < 220.dp || size.height < 110.dp
+        val isSmall   = !isTiny && (size.width < 300.dp || size.height < 180.dp)
+        val isMedium  = !isTiny && !isSmall && (size.width < 400.dp || size.height < 260.dp)
+        val isLarge   = !isTiny && !isSmall && !isMedium
 
         GlanceTheme {
             Box(
                 modifier = GlanceModifier
                     .fillMaxSize()
                     .background(ColorProvider(BgDark))
-                    .cornerRadius(20.dp)
+                    .cornerRadius(16.dp)
                     .padding(12.dp)
             ) {
                 when {
@@ -150,8 +120,10 @@ class ResourceWidget : GlanceAppWidget() {
                     else -> MetricsView(
                         snapshot = state.snapshot,
                         context  = context,
-                        isLarge  = isLarge,
-                        isMedium = isMedium
+                        isTiny   = isTiny,
+                        isSmall  = isSmall,
+                        isMedium = isMedium,
+                        isLarge  = isLarge
                     )
                 }
             }
@@ -168,7 +140,7 @@ private fun LoadingView() {
 
 @Composable
 private fun ErrorView(message: String) {
-    Column(modifier = GlanceModifier.fillMaxSize()) {
+    Column(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Connection error", style = TextStyle(color = ColorProvider(Color(0xFFE24B4A)), fontSize = 13.sp, fontWeight = FontWeight.Bold))
         Spacer(GlanceModifier.height(4.dp))
         Text(message.take(60), style = TextStyle(color = ColorProvider(TextMuted), fontSize = 11.sp))
@@ -179,70 +151,95 @@ private fun ErrorView(message: String) {
 private fun MetricsView(
     snapshot: MetricsSnapshot,
     context: Context,
-    isLarge: Boolean,
-    isMedium: Boolean
+    isTiny: Boolean,
+    isSmall: Boolean,
+    isMedium: Boolean,
+    isLarge: Boolean
 ) {
-    val gaugeSize = if (isLarge) 72 else if (isMedium) 64 else 56
     val os        = snapshot.os
     val oracle    = snapshot.oracle
 
     Column(modifier = GlanceModifier.fillMaxSize()) {
 
-        // ── Header ────────────────────────────────────────────
+        // Header
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 snapshot.serverName,
-                style = TextStyle(color = ColorProvider(TextPrimary), fontSize = 11.sp, fontWeight = FontWeight.Bold),
+                style = TextStyle(color = ColorProvider(TextPrimary), 
+                    fontSize = if (isTiny) 11.sp else 13.sp, 
+                    fontWeight = FontWeight.Bold),
                 modifier = GlanceModifier.defaultWeight()
             )
-            Text(
-                updatedAgo(WidgetStateHolder.state.lastUpdated),
-                style = TextStyle(color = ColorProvider(TextMuted), fontSize = 10.sp)
-            )
+            if (!isTiny) {
+                Text(
+                    updatedAgo(WidgetStateHolder.state.lastUpdated),
+                    style = TextStyle(color = ColorProvider(TextMuted), fontSize = 10.sp)
+                )
+            }
             Spacer(GlanceModifier.width(8.dp))
             Image(
                 provider = ImageProvider(android.R.drawable.ic_popup_sync),
                 contentDescription = "Refresh",
                 modifier = GlanceModifier
-                    .size(16.dp)
+                    .size(if (isTiny) 14.dp else 18.dp)
                     .clickable(actionRunCallback<RefreshAction>())
             )
         }
 
-        Spacer(GlanceModifier.height(8.dp))
+        if (!isTiny) Spacer(GlanceModifier.height(12.dp))
 
-        // ── Gauge row ─────────────────────────────────────────
+        // Flexible Gauges Row using weight
         Row(
-            modifier          = GlanceModifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            GaugeCell(context, os.cpuPercent,   "CPU",  gaugeSize)
-            Spacer(GlanceModifier.width(8.dp))
-            GaugeCell(context, os.ramPercent,   "RAM",  gaugeSize)
-            Spacer(GlanceModifier.width(8.dp))
-            GaugeCell(context, os.diskPercent,  "DISK", gaugeSize)
+            GaugeCell(context, os.cpuPercent,   "CPU",  GlanceModifier.defaultWeight())
+            Spacer(GlanceModifier.width(if (isTiny) 4.dp else 12.dp))
+            GaugeCell(context, os.ramPercent,   "RAM",  GlanceModifier.defaultWeight())
+            Spacer(GlanceModifier.width(if (isTiny) 4.dp else 12.dp))
+            GaugeCell(context, os.diskPercent,  "DISK", GlanceModifier.defaultWeight())
             if (oracle != null) {
-                Spacer(GlanceModifier.width(8.dp))
-                GaugeCell(context, oracle.sessionPercent, "SESS", gaugeSize)
+                Spacer(GlanceModifier.width(if (isTiny) 4.dp else 12.dp))
+                GaugeCell(context, oracle.sessionPercent, "SESS", GlanceModifier.defaultWeight())
             }
         }
 
-        // ── Large-only: sparklines + tablespace ───────────────
-        if (isLarge && oracle != null) {
-            Spacer(GlanceModifier.height(8.dp))
+        // Details rows based on size
+        if (isMedium || isLarge) {
+            Spacer(GlanceModifier.height(10.dp))
             Row(modifier = GlanceModifier.fillMaxWidth()) {
-                OracleInfoCard("Tablespace", oracle.tablespacePercent, modifier = GlanceModifier.defaultWeight())
+                StatCard("Load", "${os.loadAvg1m}", modifier = GlanceModifier.defaultWeight())
                 Spacer(GlanceModifier.width(6.dp))
-                OracleInfoCard("Redo/hr", oracle.redoSwitchesPerHour.toFloat(), isCount = true, modifier = GlanceModifier.defaultWeight())
+                if (oracle != null) {
+                    StatCard("TBSP", "${oracle.tablespacePercent.toInt()}%", modifier = GlanceModifier.defaultWeight())
+                    Spacer(GlanceModifier.width(6.dp))
+                    StatCard("DB", oracle.dbStatus, modifier = GlanceModifier.defaultWeight())
+                } else {
+                    StatCard("Net ↑", "${os.netSentMb.toInt()}MB", modifier = GlanceModifier.defaultWeight())
+                    Spacer(GlanceModifier.width(6.dp))
+                    StatCard("Net ↓", "${os.netRecvMb.toInt()}MB", modifier = GlanceModifier.defaultWeight())
+                }
+            }
+        }
+        
+        if (isLarge) {
+            Spacer(GlanceModifier.height(6.dp))
+            Row(modifier = GlanceModifier.fillMaxWidth()) {
+                StatCard("RAM", "${os.ramUsedGb}/${os.ramTotalGb}G", modifier = GlanceModifier.defaultWeight())
                 Spacer(GlanceModifier.width(6.dp))
-                OracleInfoCard("Slow Q", oracle.slowQueriesCount.toFloat(), isCount = true, modifier = GlanceModifier.defaultWeight())
+                StatCard("Disk", "${os.diskUsedGb}/${os.diskTotalGb}G", modifier = GlanceModifier.defaultWeight())
+                if (oracle != null) {
+                    Spacer(GlanceModifier.width(6.dp))
+                    StatCard("Sessions", "${oracle.activeSessions}/${oracle.maxSessions}", modifier = GlanceModifier.defaultWeight())
+                }
             }
         }
 
-        // ── Alarm bar ─────────────────────────────────────────
+        // Alarms Bar
         val alarmMetrics = buildList {
             if (os.cpuPercent  >= 85f) add("CPU ${os.cpuPercent.toInt()}%")
             if (os.ramPercent  >= 90f) add("RAM ${os.ramPercent.toInt()}%")
@@ -252,8 +249,8 @@ private fun MetricsView(
             }
         }
 
-        if (alarmMetrics.isNotEmpty()) {
-            Spacer(GlanceModifier.height(6.dp))
+        if (alarmMetrics.isNotEmpty() && !isTiny) {
+            Spacer(GlanceModifier.height(8.dp))
             Row(
                 modifier = GlanceModifier
                     .fillMaxWidth()
@@ -264,7 +261,7 @@ private fun MetricsView(
             ) {
                 Text(
                     "⚠ ${alarmMetrics.joinToString("  ·  ")}",
-                    style = TextStyle(color = ColorProvider(Color(0xFFE4876E)), fontSize = 10.sp),
+                    style = TextStyle(color = ColorProvider(Color(0xFFE4876E)), fontSize = 11.sp),
                     maxLines = 1
                 )
             }
@@ -273,42 +270,35 @@ private fun MetricsView(
 }
 
 @Composable
-private fun GaugeCell(context: Context, pct: Float, label: String, size: Int) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        val drawable = makeGaugeBitmap(pct, size, context)
-        Image(
-            provider = ImageProvider(drawable.bitmap),
-            contentDescription = "$label $pct%",
-            modifier = GlanceModifier.size(size.dp)
-        )
-        Spacer(GlanceModifier.height(2.dp))
-        Text(
-            label,
-            style = TextStyle(color = ColorProvider(TextMuted), fontSize = 9.sp,
-                fontWeight = FontWeight.Bold)
-        )
-    }
-}
-
-@Composable
-private fun OracleInfoCard(
-    label: String,
-    value: Float,
-    isCount: Boolean = false,
-    modifier: GlanceModifier = GlanceModifier
-) {
-    val display = if (isCount) value.toInt().toString() else "${value.toInt()}%"
-    val color   = if (!isCount) percentColor(value) else Color(0xFF9DB4D8)
-
+private fun StatCard(label: String, value: String, modifier: GlanceModifier = GlanceModifier) {
     Column(
         modifier = modifier
             .background(ColorProvider(CardDark))
             .cornerRadius(8.dp)
-            .padding(6.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(display, style = TextStyle(color = ColorProvider(color), fontSize = 14.sp, fontWeight = FontWeight.Bold))
-        Text(label,   style = TextStyle(color = ColorProvider(TextMuted), fontSize = 9.sp))
+        Text(value, style = TextStyle(color = ColorProvider(TextPrimary), fontSize = 12.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+        Text(label, style = TextStyle(color = ColorProvider(TextMuted), fontSize = 10.sp), maxLines = 1)
+    }
+}
+
+@Composable
+private fun GaugeCell(context: Context, pct: Float, label: String, modifier: GlanceModifier = GlanceModifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        val drawable = makeGaugeBitmap(pct, context)
+        Image(
+            provider = ImageProvider(drawable.bitmap),
+            contentDescription = "$label $pct%",
+            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            contentScale = ContentScale.Fit
+        )
+        Spacer(GlanceModifier.height(4.dp))
+        Text(
+            label,
+            style = TextStyle(color = ColorProvider(TextMuted), fontSize = 10.sp,
+                fontWeight = FontWeight.Bold)
+        )
     }
 }
 
@@ -329,12 +319,16 @@ class ResourceWidgetReceiver : GlanceAppWidgetReceiver() {
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
-        MetricsFetchWorker.schedule(context)
+        MetricsFetchWorker.fetchNow(context)
     }
 
-    override fun onDisabled(context: Context) {
-        super.onDisabled(context)
-        MetricsFetchWorker.cancel(context)
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: android.appwidget.AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        MetricsFetchWorker.fetchNow(context)
     }
 }
 
